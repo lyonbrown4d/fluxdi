@@ -177,8 +177,7 @@ fn scoped_concurrent_resolve_within_single_scope_converges_to_cached_instance() 
         .collect();
 
     let created = CREATED.load(Ordering::SeqCst);
-    assert!(created >= 1);
-    assert!(created <= THREADS);
+    assert_eq!(created, 1);
     assert!(serials.iter().all(|serial| *serial < created));
 
     let stable_a = scope.as_ref().resolve::<ScopedService>();

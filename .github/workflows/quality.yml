@@ -41,6 +41,27 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --all-features
 
+  feature-matrix:
+    name: Feature combinations
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        args:
+          - ""
+          - "--no-default-features"
+          - "--no-default-features --features thread-safe"
+          - "--features async-factory"
+          - "--features thread-safe,async-factory"
+          - "--features lock-free,async-factory"
+          - "--features resource-limit-async"
+          - "--no-default-features --features macros,lifecycle,resource-limit-async"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p fluxdi --locked ${{ matrix.args }}
+
   docs:
     name: Documentation
     runs-on: ubuntu-latest

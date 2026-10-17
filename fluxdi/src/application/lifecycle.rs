@@ -56,6 +56,7 @@ impl Application {
         info!("Starting application bootstrap process");
 
         Self::load_module(self.injector.clone(), root)?;
+        self.bootstrapped = true;
 
         #[cfg(feature = "tracing")]
         info!("Application bootstrap completed successfully");
@@ -64,11 +65,11 @@ impl Application {
 
     /// Unified bootstrap that supports module async providers and lifecycle hooks.
     ///
-    /// This executes:
-    /// 1. `configure()` for each module (imports first)
-    /// 2. `on_start()` for each module
+    /// By default, each import is configured and started before its dependents.
+    /// Parallel startup configures every module before running `on_start` hooks.
     pub async fn bootstrap(&mut self) -> Result<(), Error> {
-        self.bootstrap_with_opts(BootstrapOptions::default()).await
+        self.bootstrap_with_options(BootstrapOptions::default())
+            .await
     }
 
     /// Backward-compatible alias for the old async bootstrap name.
@@ -83,23 +84,36 @@ impl Application {
     ///
     /// When `options.parallel_start` is `true`, module `on_start` hooks run in
     /// parallel; failures are aggregated and returned as a single error.
-    #[allow(unused_variables)]
     pub async fn bootstrap_with_options(&mut self, opts: BootstrapOptions) -> Result<(), Error> {
+        let cleanup_timeout = opts.timeout;
         #[cfg(feature = "lifecycle")]
-        {
-            if let Some(duration) = opts.timeout {
-                return match tokio::time::timeout(duration, self.bootstrap_with_opts(opts)).await {
-                    Ok(Ok(())) => Ok(()),
-                    Ok(Err(e)) => Err(e),
-                    Err(_) => Err(Error::new(
-                        crate::ErrorKind::ModuleLifecycleFailed,
-                        format!("bootstrap timed out after {:?}", duration),
-                    )),
-                };
+        let result = if let Some(duration) = opts.timeout {
+            match tokio::time::timeout(duration, self.bootstrap_with_opts(opts)).await {
+                Ok(result) => result,
+                Err(_) => Err(Error::new(
+                    crate::ErrorKind::ModuleLifecycleFailed,
+                    format!("bootstrap timed out after {duration:?}"),
+                )),
             }
-        }
+        } else {
+            self.bootstrap_with_opts(opts).await
+        };
+        #[cfg(not(feature = "lifecycle"))]
+        let result = self.bootstrap_with_opts(opts).await;
 
-        self.bootstrap_with_opts(opts).await
+        if let Err(error) = result {
+            // Startup records live on Application, so cancellation cannot lose them.
+            let cleanup = self
+                .shutdown_with_options(ShutdownOptions {
+                    timeout: cleanup_timeout,
+                })
+                .await;
+            return match cleanup {
+                Ok(()) => Err(error),
+                Err(cleanup_error) => Err(Error::bootstrap_aggregate(vec![error, cleanup_error])),
+            };
+        }
+        Ok(())
     }
 
     async fn bootstrap_with_opts(&mut self, opts: BootstrapOptions) -> Result<(), Error> {
@@ -108,7 +122,9 @@ impl Application {
         #[cfg(feature = "tracing")]
         info!("Starting async application bootstrap process");
 
-        self.started_modules = Self::load_module_async(self.injector.clone(), root, opts).await?;
+        self.load_module_async(self.injector.clone(), root, opts)
+            .await?;
+        self.bootstrapped = true;
 
         #[cfg(feature = "tracing")]
         info!("Async application bootstrap completed successfully");
@@ -125,8 +141,12 @@ impl Application {
 
         let mut shutdown_errors = Vec::new();
 
+        self.bootstrapped = false;
         while let Some(loaded) = self.started_modules.pop() {
-            let module_name = std::any::type_name_of_val(&*loaded.module);
+            if !loaded.started {
+                continue;
+            }
+            let module_name = loaded.module.type_name();
             if let Err(err) = loaded.module.on_stop(loaded.injector.clone()).await {
                 shutdown_errors.push(Error::module_lifecycle_failed(
                     module_name,
@@ -182,9 +202,13 @@ impl Application {
         let deadline = Instant::now() + duration;
         let mut shutdown_errors = Vec::new();
 
+        self.bootstrapped = false;
         while let Some(loaded) = self.started_modules.pop() {
+            if !loaded.started {
+                continue;
+            }
             let remaining = deadline.saturating_duration_since(Instant::now());
-            let module_name = std::any::type_name_of_val(&*loaded.module);
+            let module_name = loaded.module.type_name();
 
             match tokio::time::timeout(
                 std::cmp::max(remaining, std::time::Duration::from_millis(1)),

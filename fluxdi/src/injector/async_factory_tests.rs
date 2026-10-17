@@ -143,8 +143,7 @@ fn concurrent_async_root_resolve_completes_and_caches() {
     }
 
     let created = creations.load(Ordering::SeqCst);
-    assert!(created >= 1);
-    assert!(created <= workers);
+    assert_eq!(created, 1);
 
     let first = block_on(injector.try_resolve_async::<usize>()).unwrap();
     let second = block_on(injector.try_resolve_async::<usize>()).unwrap();

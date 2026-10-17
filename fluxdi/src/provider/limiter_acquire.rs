@@ -13,7 +13,7 @@ impl Limiter {
                 condvar: std::sync::Condvar::new(),
                 timeout: limits.timeout,
                 #[cfg(feature = "resource-limit-async")]
-                async_semaphore: Shared::new(Semaphore::new(max)),
+                async_waiters: std::sync::Mutex::new(Vec::new()),
             }))
         }
 
@@ -48,7 +48,7 @@ impl Limiter {
             loop {
                 if *current < limiter.max {
                     *current += 1;
-                    return Ok(CreationPermit::Sync {
+                    return Ok(CreationPermit {
                         limiter: limiter.clone(),
                     });
                 }
@@ -111,7 +111,7 @@ impl Limiter {
             let current = limiter.current.get();
             if current < limiter.max {
                 limiter.current.set(current + 1);
-                return Ok(CreationPermit::Sync {
+                return Ok(CreationPermit {
                     limiter: limiter.clone(),
                 });
             }
@@ -144,48 +144,45 @@ impl Limiter {
                 "max_concurrent_creations must be greater than 0",
             ));
         }
-
-        match limiter.policy {
-            Policy::Deny => limiter
-                .async_semaphore
-                .clone()
-                .try_acquire_owned()
-                .map(CreationPermit::Async)
-                .map_err(|_| {
-                    Error::resource_limit_exceeded(
-                        type_name,
-                        format!("max_concurrent_creations={}", limiter.max).as_str(),
-                    )
-                }),
-            Policy::Block => {
-                if let Some(timeout) = limiter.timeout {
-                    let acquire = limiter.async_semaphore.clone().acquire_owned();
-                    match tokio::time::timeout(timeout, acquire).await {
-                        Ok(Ok(permit)) => Ok(CreationPermit::Async(permit)),
-                        Ok(Err(_)) => Err(Error::resource_limit_exceeded(
-                            type_name,
-                            "async semaphore closed",
-                        )),
-                        Err(_) => Err(Error::resource_limit_exceeded(
-                            type_name,
-                            format!(
-                                "max_concurrent_creations={} timeout={:?}",
-                                limiter.max, timeout
-                            )
-                            .as_str(),
-                        )),
-                    }
-                } else {
-                    limiter
-                        .async_semaphore
-                        .clone()
-                        .acquire_owned()
-                        .await
-                        .map(CreationPermit::Async)
-                        .map_err(|_| {
-                            Error::resource_limit_exceeded(type_name, "async semaphore closed")
-                        })
+        let deadline = limiter
+            .timeout
+            .map(|duration| tokio::time::Instant::now() + duration);
+        loop {
+            let receiver = {
+                let mut current = limiter.current.lock().unwrap();
+                if *current < limiter.max {
+                    *current += 1;
+                    return Ok(CreationPermit {
+                        limiter: limiter.clone(),
+                    });
                 }
+                if limiter.policy == Policy::Deny {
+                    return Err(Error::resource_limit_exceeded(
+                        type_name,
+                        &format!("max_concurrent_creations={}", limiter.max),
+                    ));
+                }
+                let (sender, receiver) = futures::channel::oneshot::channel();
+                let mut waiters = limiter.async_waiters.lock().unwrap();
+                waiters.retain(|waiter| !waiter.is_canceled());
+                waiters.push(sender);
+                receiver
+            };
+            if let Some(deadline) = deadline {
+                tokio::time::timeout_at(deadline, receiver)
+                    .await
+                    .map_err(|_| {
+                        Error::resource_limit_exceeded(
+                            type_name,
+                            &format!(
+                                "max_concurrent_creations={} timeout={:?}",
+                                limiter.max, limiter.timeout
+                            ),
+                        )
+                    })?
+                    .ok();
+            } else {
+                let _ = receiver.await;
             }
         }
     }

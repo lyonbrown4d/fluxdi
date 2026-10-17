@@ -98,6 +98,17 @@ impl<T: ?Sized + 'static> Provider<T> {
             dependency_hints,
             limiter,
         } = self;
+        let decorator = Shared::new(decorator);
+        #[cfg(feature = "async-factory")]
+        let async_factory = async_factory.map(|factory| {
+            let decorator = decorator.clone();
+            Box::new(move |injector| {
+                let future = factory(injector);
+                let decorator = decorator.clone();
+                Box::pin(async move { Instance::new(decorator(future.await.value())) })
+                    as Pin<Box<dyn Future<Output = Instance<T>>>>
+            }) as AsyncFactory<T>
+        });
         Self {
             scope,
             factory: Box::new(move |inj| {
@@ -127,6 +138,17 @@ impl<T: ?Sized + 'static> Provider<T> {
             dependency_hints,
             limiter,
         } = self;
+        let decorator = Shared::new(decorator);
+        #[cfg(feature = "async-factory")]
+        let async_factory = async_factory.map(|factory| {
+            let decorator = decorator.clone();
+            Box::new(move |injector| {
+                let future = factory(injector);
+                let decorator = decorator.clone();
+                Box::pin(async move { Instance::new(decorator(future.await.value())) })
+                    as Pin<Box<dyn Future<Output = Instance<T>> + Send>>
+            }) as AsyncFactory<T>
+        });
         Self {
             scope,
             factory: Box::new(move |inj| {

@@ -2,11 +2,11 @@ use super::*;
 
 #[cfg(not(feature = "thread-safe"))]
 impl<T: ?Sized + 'static> Provider<T> {
-    /// Creates a singleton provider with module scope (single-threaded).
+    /// Creates a singleton provider with calling-context scope (single-threaded).
     ///
-    /// A singleton provider creates **one instance per injector module**.
+    /// A singleton provider creates **one instance per calling injector context**.
     /// Once created, the same instance is returned on subsequent resolutions
-    /// within the same module.
+    /// within that same context. Child injectors use their own caches.
     ///
     /// # Type Parameters
     ///

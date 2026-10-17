@@ -1,6 +1,8 @@
 # Modules And Lifecycle
 
-`Module::configure(...)` is the unified provider registration entry.
+`Module::configure(...)` is the preferred provider registration entry. Async
+bootstrap invokes `providers_async(...)`, whose default implementation calls
+`configure(...)`; existing overrides of the async hook continue to run.
 
 For async startup/shutdown orchestration, use:
 
@@ -50,7 +52,16 @@ async fn main() -> Result<(), fluxdi::Error> {
 }
 ```
 
-When a timeout is exceeded, an error is returned instead of hanging indefinitely.
+When a timeout is exceeded, bootstrap returns an error and stops modules that
+finished startup successfully, in reverse module order. Configuration and startup
+errors use the same rollback path. Cleanup receives a separate timeout budget equal
+to the configured startup timeout, so the full operation can exceed that timeout.
+If the caller cancels bootstrap directly, call `shutdown()` to clean up modules
+that already started. A failed or canceled `on_start` must manage its own partially
+created resources; only hooks that returned success enter the shutdown list.
+`is_bootstrapped()` becomes true only after successful startup and false after
+shutdown. A failed or canceled application cannot bootstrap again; create a new
+`Application` for a fresh attempt.
 
 ## Shutdown Error Aggregation
 

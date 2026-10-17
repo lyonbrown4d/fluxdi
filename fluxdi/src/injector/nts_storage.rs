@@ -1,66 +1,6 @@
 use super::*;
 
 impl Injector {
-    pub(crate) fn store_instance<T>(&self, instance: Shared<Instance<T>>)
-    where
-        T: ?Sized + 'static,
-    {
-        let type_id = TypeId::of::<T>();
-        #[cfg(feature = "tracing")]
-        let type_name = std::any::type_name::<T>();
-
-        self.inner.instances.borrow_mut().insert(type_id, instance);
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            op = "instance_store",
-            "Stored resolved instance in cache"
-        );
-    }
-
-    pub(crate) fn store_set_instance<T>(
-        &self,
-        provider_ref: &Shared<Provider<T>>,
-        instance: Shared<Instance<T>>,
-    ) where
-        T: ?Sized + 'static,
-    {
-        let key = SetProviderKey::of::<T>(provider_ref);
-        #[cfg(feature = "tracing")]
-        let type_name = std::any::type_name::<T>();
-        self.inner.set_instances.borrow_mut().insert(key, instance);
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            op = "instance_store_set",
-            provider_ptr = key.provider_ptr,
-            "Stored set-binding instance in cache"
-        );
-    }
-
-    pub(crate) fn store_instance_named<T>(&self, name: &str, instance: Shared<Instance<T>>)
-    where
-        T: ?Sized + 'static,
-    {
-        let key = NamedTypeKey::of::<T>(name);
-        #[cfg(feature = "tracing")]
-        let type_name = std::any::type_name::<T>();
-        self.inner
-            .named_instances
-            .borrow_mut()
-            .insert(key, instance);
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            name = %name,
-            op = "instance_store_named",
-            "Stored named instance in cache"
-        );
-    }
-
     pub(crate) fn store_provider<T>(&self, provider: Provider<T>) -> Result<(), Error>
     where
         T: ?Sized + 'static,
@@ -206,6 +146,9 @@ impl Injector {
     where
         T: ?Sized + 'static,
     {
+        let previous = self
+            .resolve_provider::<T>()
+            .map_err(|_| Error::service_not_provided_for_override(std::any::type_name::<T>()))?;
         let type_id = TypeId::of::<T>();
         let type_name = std::any::type_name::<T>();
         #[cfg(feature = "tracing")]
@@ -239,7 +182,7 @@ impl Injector {
             .borrow_mut()
             .insert(type_id, graph_meta);
 
-        self.clear_instance_cache::<T>();
+        self.clear_initialization(&previous);
 
         #[cfg(feature = "tracing")]
         debug!(
@@ -250,163 +193,5 @@ impl Injector {
         );
 
         Ok(())
-    }
-
-    pub(crate) fn clear_instance_cache<T>(&self)
-    where
-        T: ?Sized + 'static,
-    {
-        let type_id = TypeId::of::<T>();
-        #[cfg(feature = "tracing")]
-        let type_name = std::any::type_name::<T>();
-        self.inner.instances.borrow_mut().remove(&type_id);
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            op = "instance_cache_clear",
-            "Cleared cached instance for type"
-        );
-    }
-
-    pub(crate) fn get_instance<T>(&self) -> Option<Shared<Instance<T>>>
-    where
-        T: ?Sized + 'static,
-    {
-        let type_id = TypeId::of::<T>();
-        #[cfg(feature = "tracing")]
-        let type_name = std::any::type_name::<T>();
-
-        let local = self.inner.instances.borrow().get(&type_id).cloned();
-
-        if local.is_some() {
-            #[cfg(feature = "tracing")]
-            trace!(
-                type_name = type_name,
-                op = "instance_lookup",
-                source = "local",
-                hit = true,
-                "Instance cache hit"
-            );
-            return local.and_then(|instance| instance.downcast::<Instance<T>>().ok());
-        }
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            op = "instance_lookup",
-            source = "local",
-            hit = false,
-            has_parent = self.inner.parent.is_some(),
-            "Instance cache miss"
-        );
-
-        if let Some(parent) = &self.inner.parent {
-            let parent_injector = Injector {
-                inner: parent.clone(),
-            };
-            #[cfg(feature = "tracing")]
-            trace!(
-                type_name = type_name,
-                op = "instance_lookup",
-                source = "parent",
-                "Falling back to parent cache"
-            );
-            return parent_injector.get_instance::<T>();
-        }
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            op = "instance_lookup",
-            source = "none",
-            "Instance not cached in injector hierarchy"
-        );
-
-        None
-    }
-
-    pub(crate) fn get_set_instance<T>(
-        &self,
-        provider_ref: &Shared<Provider<T>>,
-    ) -> Option<Shared<Instance<T>>>
-    where
-        T: ?Sized + 'static,
-    {
-        let key = SetProviderKey::of::<T>(provider_ref);
-        #[cfg(feature = "tracing")]
-        let type_name = std::any::type_name::<T>();
-        let local = self.inner.set_instances.borrow().get(&key).cloned();
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            op = "instance_lookup_set",
-            provider_ptr = key.provider_ptr,
-            hit = local.is_some(),
-            "Set-binding instance lookup completed"
-        );
-
-        local.and_then(|instance| instance.downcast::<Instance<T>>().ok())
-    }
-
-    pub(crate) fn get_instance_named<T>(&self, name: &str) -> Option<Shared<Instance<T>>>
-    where
-        T: ?Sized + 'static,
-    {
-        let key = NamedTypeKey::of::<T>(name);
-        #[cfg(feature = "tracing")]
-        let type_name = std::any::type_name::<T>();
-        let local = self.inner.named_instances.borrow().get(&key).cloned();
-
-        if local.is_some() {
-            #[cfg(feature = "tracing")]
-            trace!(
-                type_name = type_name,
-                name = %name,
-                op = "instance_lookup_named",
-                source = "local",
-                hit = true,
-                "Named instance cache hit"
-            );
-            return local.and_then(|instance| instance.downcast::<Instance<T>>().ok());
-        }
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            name = %name,
-            op = "instance_lookup_named",
-            source = "local",
-            hit = false,
-            has_parent = self.inner.parent.is_some(),
-            "Named instance cache miss"
-        );
-
-        if let Some(parent) = &self.inner.parent {
-            let parent_injector = Injector {
-                inner: parent.clone(),
-            };
-            #[cfg(feature = "tracing")]
-            trace!(
-                type_name = type_name,
-                name = %name,
-                op = "instance_lookup_named",
-                source = "parent",
-                "Falling back to parent cache for named instance"
-            );
-            return parent_injector.get_instance_named::<T>(name);
-        }
-
-        #[cfg(feature = "tracing")]
-        trace!(
-            type_name = type_name,
-            name = %name,
-            op = "instance_lookup_named",
-            source = "none",
-            "Named instance not cached in injector hierarchy"
-        );
-
-        None
     }
 }

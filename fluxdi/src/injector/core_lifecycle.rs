@@ -19,11 +19,7 @@ impl Injector {
                 #[cfg(not(feature = "thread-safe"))]
                 graph_named_providers: Store::new(HashMap::new()),
                 #[cfg(not(feature = "thread-safe"))]
-                instances: Store::new(HashMap::new()),
-                #[cfg(not(feature = "thread-safe"))]
-                set_instances: Store::new(HashMap::new()),
-                #[cfg(not(feature = "thread-safe"))]
-                named_instances: Store::new(HashMap::new()),
+                initializations: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
                 providers: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
@@ -37,11 +33,7 @@ impl Injector {
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
                 graph_named_providers: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                instances: Store::new(HashMap::new()),
-                #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                set_instances: Store::new(HashMap::new()),
-                #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                named_instances: Store::new(HashMap::new()),
+                initializations: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
                 providers: DashMap::new(),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
@@ -55,11 +47,7 @@ impl Injector {
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
                 graph_named_providers: DashMap::new(),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                instances: DashMap::new(),
-                #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                set_instances: DashMap::new(),
-                #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                named_instances: DashMap::new(),
+                initializations: DashMap::new(),
                 #[cfg(feature = "metrics")]
                 metrics: Shared::new(MetricsState::default()),
             }),
@@ -84,11 +72,7 @@ impl Injector {
                 #[cfg(not(feature = "thread-safe"))]
                 graph_named_providers: Store::new(HashMap::new()),
                 #[cfg(not(feature = "thread-safe"))]
-                instances: Store::new(HashMap::new()),
-                #[cfg(not(feature = "thread-safe"))]
-                set_instances: Store::new(HashMap::new()),
-                #[cfg(not(feature = "thread-safe"))]
-                named_instances: Store::new(HashMap::new()),
+                initializations: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
                 providers: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
@@ -102,11 +86,7 @@ impl Injector {
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
                 graph_named_providers: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                instances: Store::new(HashMap::new()),
-                #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                set_instances: Store::new(HashMap::new()),
-                #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                named_instances: Store::new(HashMap::new()),
+                initializations: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
                 providers: DashMap::new(),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
@@ -120,11 +100,7 @@ impl Injector {
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
                 graph_named_providers: DashMap::new(),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                instances: DashMap::new(),
-                #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                set_instances: DashMap::new(),
-                #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                named_instances: DashMap::new(),
+                initializations: DashMap::new(),
                 #[cfg(feature = "metrics")]
                 metrics: parent.inner.metrics.clone(),
             }),
@@ -149,11 +125,7 @@ impl Injector {
                 #[cfg(not(feature = "thread-safe"))]
                 graph_named_providers: Store::new(HashMap::new()),
                 #[cfg(not(feature = "thread-safe"))]
-                instances: Store::new(HashMap::new()),
-                #[cfg(not(feature = "thread-safe"))]
-                set_instances: Store::new(HashMap::new()),
-                #[cfg(not(feature = "thread-safe"))]
-                named_instances: Store::new(HashMap::new()),
+                initializations: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
                 providers: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
@@ -167,11 +139,7 @@ impl Injector {
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
                 graph_named_providers: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                instances: Store::new(HashMap::new()),
-                #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                set_instances: Store::new(HashMap::new()),
-                #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-                named_instances: Store::new(HashMap::new()),
+                initializations: Store::new(HashMap::new()),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
                 providers: DashMap::new(),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
@@ -185,11 +153,7 @@ impl Injector {
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
                 graph_named_providers: DashMap::new(),
                 #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                instances: DashMap::new(),
-                #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                set_instances: DashMap::new(),
-                #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-                named_instances: DashMap::new(),
+                initializations: DashMap::new(),
                 #[cfg(feature = "metrics")]
                 metrics: parent.inner.metrics.clone(),
             }),

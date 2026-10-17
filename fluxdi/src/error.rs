@@ -35,8 +35,7 @@ use tracing::error;
 ///
 /// These variants are intentionally coarse-grained to keep error handling
 /// straightforward while still expressive enough for diagnostics.
-#[derive(Clone, PartialEq)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, PartialEq, Debug)]
 pub enum ErrorKind {
     /// Service provider not found for the requested type.
     ServiceNotProvided,
@@ -46,7 +45,7 @@ pub enum ErrorKind {
     ProviderAlreadyRegistered,
     /// Circular dependency detected in resolution chain.
     CircularDependency,
-    /// Async provider was resolved through a synchronous resolve method.
+    /// Async factory or in-progress async initialization requires async resolve.
     AsyncFactoryRequiresAsyncResolve,
     /// Service creation was denied by configured resource limits.
     ResourceLimitExceeded,
@@ -59,8 +58,7 @@ pub enum ErrorKind {
 /// Container error structure.
 ///
 /// `kind` enables programmatic handling, while `message` is human-readable.
-#[derive(Clone)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct Error {
     pub kind: ErrorKind,
     pub message: String,
@@ -260,7 +258,6 @@ impl fmt::Display for Error {
     }
 }
 
-#[cfg(feature = "debug")]
 impl std::error::Error for Error {}
 
 #[cfg(test)]

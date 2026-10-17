@@ -219,3 +219,39 @@ fn async_block_policy_with_timeout_uses_non_blocking_wait() {
         Err(error) if error.kind == ErrorKind::ResourceLimitExceeded
     ));
 }
+
+#[cfg(feature = "resource-limit-async")]
+#[test]
+fn sync_and_async_resolve_share_the_same_creation_limit() {
+    use std::sync::{
+        Arc, Mutex,
+        atomic::{AtomicUsize, Ordering},
+        mpsc,
+    };
+    let injector = Arc::new(Injector::root());
+    let (started_tx, started_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let release_rx = Arc::new(Mutex::new(release_rx));
+    let calls = Arc::new(AtomicUsize::new(0));
+    injector.provide::<u32>(Provider::transient_with_limits(
+        Limits::deny(1),
+        move |_| {
+            if calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                started_tx.send(()).unwrap();
+                release_rx.lock().unwrap().recv().unwrap();
+            }
+            Shared::new(7)
+        },
+    ));
+    let first = {
+        let injector = injector.clone();
+        std::thread::spawn(move || injector.try_resolve::<u32>())
+    };
+    started_rx
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap();
+    let second = futures::executor::block_on(injector.try_resolve_async::<u32>());
+    release_tx.send(()).unwrap();
+    first.join().unwrap().unwrap();
+    assert!(matches!(second, Err(error) if error.kind == ErrorKind::ResourceLimitExceeded));
+}

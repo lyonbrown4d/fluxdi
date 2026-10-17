@@ -69,7 +69,7 @@ fn test_nested_instances() {
         value: u32,
     }
 
-    #[derive(Debug)]
+    #[cfg_attr(feature = "debug", derive(Debug))]
     struct Outer {
         inner_instance: Instance<Inner>,
     }

@@ -48,7 +48,7 @@ impl Application {
 
     /// Checks whether the application has been bootstrapped.
     ///
-    /// Returns `true` if bootstrap has been called through either
+    /// Returns `true` after successful startup through either
     /// [`bootstrap_sync()`](Application::bootstrap_sync) or [`bootstrap()`](Application::bootstrap),
     /// `false` otherwise.
     ///
@@ -76,7 +76,7 @@ impl Application {
     /// assert!(app.is_bootstrapped());
     /// ```
     pub fn is_bootstrapped(&self) -> bool {
-        let bootstrapped = self.root.is_none();
+        let bootstrapped = self.bootstrapped;
 
         #[cfg(feature = "tracing")]
         debug!("Checking application bootstrap state: {}", bootstrapped);

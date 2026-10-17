@@ -86,30 +86,16 @@ pub(crate) struct Limiter {
     pub(super) condvar: std::sync::Condvar,
     pub(super) timeout: Option<Duration>,
     #[cfg(feature = "resource-limit-async")]
-    pub(super) async_semaphore: Shared<Semaphore>,
+    pub(super) async_waiters: std::sync::Mutex<Vec<futures::channel::oneshot::Sender<()>>>,
 }
 
 #[derive(Debug)]
-pub(crate) enum CreationPermit {
-    Sync {
-        limiter: Shared<Limiter>,
-    },
-    #[cfg(all(feature = "thread-safe", feature = "resource-limit-async"))]
-    Async(OwnedSemaphorePermit),
+pub(crate) struct CreationPermit {
+    pub(super) limiter: Shared<Limiter>,
 }
 
 impl Drop for CreationPermit {
     fn drop(&mut self) {
-        #[cfg(all(feature = "thread-safe", feature = "resource-limit-async"))]
-        match self {
-            Self::Sync { limiter } => limiter.release(),
-            Self::Async(_permit) => {}
-        }
-
-        #[cfg(not(all(feature = "thread-safe", feature = "resource-limit-async")))]
-        {
-            let Self::Sync { limiter } = self;
-            limiter.release();
-        }
+        self.limiter.release();
     }
 }

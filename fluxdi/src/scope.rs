@@ -8,8 +8,8 @@ use tracing::debug;
 /// * `Root` - Root-level singleton. The instance is created once and shared
 ///   across the entire application during its complete lifecycle.
 ///
-/// * `Module` - Module-level singleton. The instance is created once per module
-///   and shared among all consumers within that specific module.
+/// * `Module` - Calling-context singleton. The instance is created once per resolving injector
+///   context. Cloned handles share it; child injectors have their own caches.
 ///
 /// * `Scoped` - Scope-level singleton. The instance is created once per runtime
 ///   scope (created with [`Injector::create_scope`](crate::Injector::create_scope))
@@ -29,8 +29,7 @@ use tracing::debug;
 /// let transient_scope = Scope::Transient;
 /// assert!(!transient_scope.is_singleton());
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Scope {
     Root,
     Module,

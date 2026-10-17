@@ -36,6 +36,7 @@ impl Application {
         info!("Creating new Application instance with root module");
 
         Self {
+            bootstrapped: false,
             root: Some(Box::new(root)),
             injector: Shared::new(Injector::root()),
             started_modules: Vec::new(),

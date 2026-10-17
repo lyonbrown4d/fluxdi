@@ -38,7 +38,7 @@ cargo bench -p fluxdi
 # Thread-safe (Arc + RwLock)
 cargo bench -p fluxdi --features thread-safe
 
-# Lock-free (DashMap, high concurrency)
+# Sharded locking (DashMap, legacy feature name: lock-free)
 cargo bench -p fluxdi --features "thread-safe,lock-free"
 ```
 

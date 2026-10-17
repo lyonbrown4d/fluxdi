@@ -9,6 +9,14 @@ impl Limiter {
                 *current -= 1;
             }
 
+            #[cfg(feature = "resource-limit-async")]
+            let waiters = std::mem::take(&mut *self.async_waiters.lock().unwrap());
+            drop(current);
+            #[cfg(feature = "resource-limit-async")]
+            for waiter in waiters {
+                let _ = waiter.send(());
+            }
+
             if self.policy == Policy::Block {
                 self.condvar.notify_one();
             }

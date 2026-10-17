@@ -5,7 +5,7 @@
 //!
 //! # Lifecycle Scopes
 //!
-//! - **Singleton (Module)**: One instance per injector module
+//! - **Singleton (Module)**: One instance per calling injector context
 //! - **Transient**: New instance on every resolution
 //! - **Root**: One instance per root injector (application-wide)
 //!
@@ -59,9 +59,6 @@ use std::future::Future;
 #[cfg(feature = "async-factory")]
 use std::pin::Pin;
 use std::time::Duration;
-
-#[cfg(all(feature = "thread-safe", feature = "resource-limit-async"))]
-use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 #[cfg(feature = "tracing")]
 use tracing::{debug, info};

@@ -15,11 +15,12 @@ use crate::observability::{MetricsSnapshot, MetricsState};
 #[cfg(feature = "tracing")]
 use crate::observability::{SPAN_FACTORY_EXECUTE, SPAN_PROVIDE, SPAN_RESOLVE};
 use crate::provider::Provider;
-use crate::resolve_guard::ResolveGuard;
+use crate::resolve_guard::{ResolutionKey, ResolveGuard};
 use crate::runtime::Shared;
 #[cfg(not(all(feature = "thread-safe", feature = "lock-free")))]
 use crate::runtime::Store;
 use crate::scope::Scope;
+use initialization::Initialization;
 
 #[cfg(feature = "tracing")]
 use tracing::{debug, info_span, trace};
@@ -154,11 +155,7 @@ struct InjectorInner {
     #[cfg(not(feature = "thread-safe"))]
     pub(crate) graph_named_providers: Store<HashMap<NamedTypeKey, ProviderGraphMeta>>,
     #[cfg(not(feature = "thread-safe"))]
-    pub(crate) instances: Store<HashMap<TypeId, Shared<dyn Any>>>,
-    #[cfg(not(feature = "thread-safe"))]
-    pub(crate) set_instances: Store<HashMap<SetProviderKey, Shared<dyn Any>>>,
-    #[cfg(not(feature = "thread-safe"))]
-    pub(crate) named_instances: Store<HashMap<NamedTypeKey, Shared<dyn Any>>>,
+    pub(crate) initializations: Store<HashMap<SetProviderKey, Shared<dyn Any>>>,
 
     #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
     pub(crate) providers: Store<HashMap<TypeId, Shared<dyn Any + Send + Sync>>>,
@@ -173,11 +170,7 @@ struct InjectorInner {
     #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
     pub(crate) graph_named_providers: Store<HashMap<NamedTypeKey, ProviderGraphMeta>>,
     #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-    pub(crate) instances: Store<HashMap<TypeId, Shared<dyn Any + Send + Sync>>>,
-    #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-    pub(crate) set_instances: Store<HashMap<SetProviderKey, Shared<dyn Any + Send + Sync>>>,
-    #[cfg(all(feature = "thread-safe", not(feature = "lock-free")))]
-    pub(crate) named_instances: Store<HashMap<NamedTypeKey, Shared<dyn Any + Send + Sync>>>,
+    pub(crate) initializations: Store<HashMap<SetProviderKey, Shared<dyn Any + Send + Sync>>>,
 
     #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
     pub(crate) providers: DashMap<TypeId, Shared<dyn Any + Send + Sync>>,
@@ -192,11 +185,7 @@ struct InjectorInner {
     #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
     pub(crate) graph_named_providers: DashMap<NamedTypeKey, ProviderGraphMeta>,
     #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-    pub(crate) instances: DashMap<TypeId, Shared<dyn Any + Send + Sync>>,
-    #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-    pub(crate) set_instances: DashMap<SetProviderKey, Shared<dyn Any + Send + Sync>>,
-    #[cfg(all(feature = "thread-safe", feature = "lock-free"))]
-    pub(crate) named_instances: DashMap<NamedTypeKey, Shared<dyn Any + Send + Sync>>,
+    pub(crate) initializations: DashMap<SetProviderKey, Shared<dyn Any + Send + Sync>>,
 
     #[cfg(feature = "metrics")]
     pub(crate) metrics: Shared<MetricsState>,
@@ -214,9 +203,7 @@ impl std::fmt::Debug for InjectorInner {
         ds.field("graph_set_providers", &self.graph_set_providers);
         ds.field("named_providers", &self.named_providers);
         ds.field("graph_named_providers", &self.graph_named_providers);
-        ds.field("instances", &self.instances);
-        ds.field("set_instances", &self.set_instances);
-        ds.field("named_instances", &self.named_instances);
+        ds.field("initializations", &self.initializations);
         #[cfg(feature = "metrics")]
         ds.field("metrics", &self.metrics.snapshot());
         ds.finish()
@@ -247,8 +234,6 @@ mod graph_state;
 mod graph_validation;
 
 #[cfg(not(feature = "thread-safe"))]
-mod nts_instance_factory;
-#[cfg(not(feature = "thread-safe"))]
 mod nts_provider_lookup;
 #[cfg(not(feature = "thread-safe"))]
 mod nts_registration;
@@ -259,8 +244,6 @@ mod nts_resolve_sync;
 #[cfg(not(feature = "thread-safe"))]
 mod nts_storage;
 
-#[cfg(feature = "thread-safe")]
-mod ts_instance_factory;
 #[cfg(feature = "thread-safe")]
 mod ts_provider_lookup;
 #[cfg(feature = "thread-safe")]
@@ -273,3 +256,7 @@ mod ts_resolve_sync;
 mod ts_storage_read;
 #[cfg(feature = "thread-safe")]
 mod ts_storage_write;
+
+mod cache_storage;
+mod initialization;
+mod resolution;

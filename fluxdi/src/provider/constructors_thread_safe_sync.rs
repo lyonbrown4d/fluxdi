@@ -2,11 +2,11 @@ use super::*;
 
 #[cfg(feature = "thread-safe")]
 impl<T: ?Sized + 'static> Provider<T> {
-    /// Creates a singleton provider with module scope (thread-safe).
+    /// Creates a singleton provider with calling-context scope (thread-safe).
     ///
-    /// A singleton provider creates **one instance per injector module**.
+    /// A singleton provider creates **one instance per calling injector context**.
     /// Once created, the same instance is returned on subsequent resolutions
-    /// within the same module. The instance can be safely shared across threads.
+    /// within that same context. Child injectors use their own caches. The instance can be safely shared across threads.
     ///
     /// # Type Parameters
     ///

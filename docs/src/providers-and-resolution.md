@@ -4,8 +4,20 @@ FluxDI supports four scopes:
 
 - `Provider::transient(...)` creates a new instance for each resolve.
 - `Provider::root(...)` caches globally at root injector scope.
-- `Provider::singleton(...)` caches at module injector scope.
+- `Provider::singleton(...)` caches once per calling injector context (`Scope::Module`). Cloned injector handles share that context; child injectors and new runtime scopes have their own caches.
 - `Provider::scoped(...)` caches once per runtime scope created via `create_scope()`.
+
+A provider inherited from a parent is resolved using the calling context. A local
+binding takes precedence over a parent's cached instance. A nested `create_scope()`
+starts a new scoped cache; ordinary child injectors inside that scope share the
+nearest scoped cache. Root bindings remain shared across the entire hierarchy.
+
+Concurrent first resolves of a cached binding share one initialization. Async
+waiters can retry after an initializer is canceled or panics. If synchronous
+resolution encounters an initializer already running asynchronously, it returns
+`AsyncFactoryRequiresAsyncResolve` rather than blocking the executor; use async resolution
+to wait. Resolving an uncached async factory synchronously still returns
+`AsyncFactoryRequiresAsyncResolve`.
 
 Example:
 

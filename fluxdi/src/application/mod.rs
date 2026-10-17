@@ -54,6 +54,7 @@ type ModuleObject = Box<dyn Module>;
 struct LoadedModule {
     module: ModuleObject,
     injector: Shared<Injector>,
+    started: bool,
 }
 
 /// The main application container for dependency injection.
@@ -101,6 +102,7 @@ struct LoadedModule {
 /// // Use injector to get services
 /// ```
 pub struct Application {
+    bootstrapped: bool,
     root: Option<ModuleObject>,
     injector: Shared<Injector>,
     started_modules: Vec<LoadedModule>,

@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Build Status](https://github.com/DaiYuANg/fluxdi/actions/workflows/CI.yml/badge.svg)](https://github.com/DaiYuANg/fluxdi/actions/workflows/CI.yml)
 
-A lightweight, type-safe dependency injection container for Rust applications. FluxDI provides ergonomic service registration (including trait-object bindings), transient/root/module/scoped lifetimes, semi-automatic dependency resolution, and circular dependency detection.
+A lightweight, type-safe dependency injection container for Rust applications. FluxDI provides ergonomic service registration (including trait-object bindings), transient/root/calling-context/scoped lifetimes, semi-automatic dependency resolution, and circular dependency detection.
 
 ## ✨ Features
 
@@ -17,7 +17,7 @@ A lightweight, type-safe dependency injection container for Rust applications. F
 - ❌ **Error Handling**: Comprehensive error types with detailed messages
 - 📊 **Optional Logging**: Built-in logging initialization and tracing integration
 - 🚀 **Zero-Cost Abstractions**: Feature gates enable compile-time optimization
-- 🧵 **Thread-Safe by Default**: Uses `Arc` + `RwLock` for concurrent access
+- 🧵 **Optional Thread Safety**: Enable `thread-safe` for `Arc` and concurrent storage
 - 📦 **Module System**: Organize services into reusable modules
 - 🏗️ **Enterprise Ready**: Supports layered architecture, repository pattern, and use cases
 
@@ -1046,6 +1046,15 @@ fluxdi/
 
 ## 🔧 Configuration
 
+### Singleton Context
+
+`Provider::singleton(...)` caches in the injector context that calls resolve.
+Cloning an injector shares its context; child injectors and new runtime scopes get
+independent singleton caches. Use `Provider::root(...)` for hierarchy-wide sharing,
+and `Provider::scoped(...)` for the nearest runtime scope. See
+[Providers And Resolution](../docs/src/providers-and-resolution.md) for concurrency
+and initialization error behavior.
+
 ### Feature Flags
 
 FluxDI exposes a small set of feature flags. See `fluxdi/Cargo.toml` for the authoritative list:
@@ -1061,7 +1070,7 @@ FluxDI exposes a small set of feature flags. See `fluxdi/Cargo.toml` for the aut
 - `actix` (optional) — enables Actix-web integration helpers and extractors (and enables `thread-safe`).
 - `axum` (optional) — enables Axum integration helpers and extractors (and enables `thread-safe`).
 - `async-factory` (optional) — enables `Provider::*_async` and `Injector::*_resolve_async` APIs.
-- `resource-limit-async` (optional) — uses Tokio semaphore for non-blocking async waits in resource limits.
+- `resource-limit-async` (optional) — enables non-blocking async resource-limit waits sharing the synchronous creation budget, with Tokio timeouts.
 - `macros` (optional) — enables `#[derive(Injectable)]` via `fluxdi-macros`.
 - `lifecycle` (optional) — enables `BootstrapOptions`/`ShutdownOptions` timeout support for production environments.
 
@@ -1114,7 +1123,7 @@ cargo clippy -- -D warnings
 - [x] **Arc-based Runtime**: Thread-safe version of FluxDI using `Arc` instead of `Rc` (implemented behind the `thread-safe` feature)
 - [x] **Send + Sync Services**: Support for `Send + Sync` services in thread-safe mode (enforced by API bounds)
 - [x] **Concurrent Access**: Concurrent reads/writes supported via `RwLock` in thread-safe mode
-- [x] **Lock-free Operations**: Optional `lock-free` feature (`DashMap`) for high-concurrency resolve paths
+- [x] **Sharded Concurrent Storage**: Optional `lock-free` feature uses `DashMap` (the feature name is retained for compatibility)
 
 ### 🔧 Advanced Features
 - [x] **Lazy Initialization**: Singleton instances are created on first `resolve`
