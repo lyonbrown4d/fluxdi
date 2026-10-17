@@ -2,6 +2,8 @@
 
 Procedural macros for FluxDI.
 
+The unreleased workspace requires Rust 1.99.1 or newer. The fallible constructor described below is part of the unreleased workspace.
+
 This crate currently exposes one derive macro:
 
 - `#[derive(Injectable)]`
@@ -37,9 +39,15 @@ the macro generates:
 ```rust
 impl AppService {
     pub fn from_injector(injector: &fluxdi::Injector) -> fluxdi::Shared<Self> {
-        fluxdi::Shared::new(Self {
-            dep: injector.resolve::<MyDep>(),
-        })
+        Self::try_from_injector(injector).unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    pub fn try_from_injector(
+        injector: &fluxdi::Injector,
+    ) -> Result<fluxdi::Shared<Self>, fluxdi::Error> {
+        Ok(fluxdi::Shared::new(Self {
+            dep: injector.try_resolve::<MyDep>()?,
+        }))
     }
 }
 ```
@@ -84,6 +92,11 @@ Not supported:
 
 ## Error Behavior
 
-The generated method uses `injector.resolve::<T>()`, so missing providers panic at runtime.
+`try_from_injector` propagates the first dependency resolution error. Register it with a fallible provider and resolve with a `try_` method:
 
-If you need recoverable errors, create your own constructor and use `try_resolve::<T>()` manually.
+```rust
+injector.provide::<AppService>(Provider::try_root(AppService::try_from_injector));
+let service = injector.try_resolve::<AppService>()?;
+```
+
+`from_injector` keeps the existing panic-on-error behavior. Neither method catches panics from user factories.

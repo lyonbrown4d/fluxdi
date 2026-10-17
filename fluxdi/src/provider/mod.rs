@@ -97,3 +97,23 @@ pub use provider_type::Provider;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(not(feature = "thread-safe"))]
+type TryFactory<T> = Box<dyn Fn(&Injector) -> Result<Instance<T>, Error> + 'static>;
+#[cfg(feature = "thread-safe")]
+type TryFactory<T> = Box<dyn Fn(&Injector) -> Result<Instance<T>, Error> + Send + Sync + 'static>;
+#[cfg(all(feature = "async-factory", not(feature = "thread-safe")))]
+type TryAsyncFactory<T> =
+    Box<dyn Fn(Injector) -> Pin<Box<dyn Future<Output = Result<Instance<T>, Error>>>> + 'static>;
+#[cfg(all(feature = "async-factory", feature = "thread-safe"))]
+type TryAsyncFactory<T> = Box<
+    dyn Fn(Injector) -> Pin<Box<dyn Future<Output = Result<Instance<T>, Error>> + Send>>
+        + Send
+        + Sync
+        + 'static,
+>;
+
+#[cfg(not(feature = "thread-safe"))]
+mod constructors_fallible_local;
+#[cfg(feature = "thread-safe")]
+mod constructors_fallible_shared;

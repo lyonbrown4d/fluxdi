@@ -2,6 +2,8 @@
 
 ## Install
 
+The unreleased workspace requires **Rust 1.99.1 or newer**. `rust-toolchain.toml` pins the development toolchain to 1.99.1; all workspace packages declare the same minimum version. The published dependency examples below refer to earlier releases.
+
 ```toml
 [dependencies]
 fluxdi = "1.2.1"

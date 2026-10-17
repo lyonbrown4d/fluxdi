@@ -28,6 +28,9 @@ impl<T: ?Sized + 'static> std::fmt::Debug for Provider<T> {
             ds.field("async_factory", &self.async_factory.is_some());
         }
 
+        ds.field("try_factory", &self.try_factory.is_some());
+        #[cfg(feature = "async-factory")]
+        ds.field("try_async_factory", &self.try_async_factory.is_some());
         ds.field("limits", &self.limits);
         ds.field("dependency_hints", &self.dependency_hints.len());
         ds.field("limiter", &self.limiter.is_some());

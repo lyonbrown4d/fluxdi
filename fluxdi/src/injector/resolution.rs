@@ -94,7 +94,7 @@ impl Injector {
         #[cfg(feature = "metrics")]
         self.inner.metrics.record_factory_execution();
         let _permit = provider.acquire_creation_permit(std::any::type_name::<T>())?;
-        Ok(Shared::new((provider.factory)(self)))
+        provider.create(self).map(Shared::new)
     }
 
     #[cfg(feature = "async-factory")]
@@ -108,11 +108,7 @@ impl Injector {
             let _permit = provider
                 .acquire_creation_permit_async(std::any::type_name::<T>())
                 .await?;
-            let instance = if let Some(factory) = &provider.async_factory {
-                factory(self.clone()).await
-            } else {
-                (provider.factory)(self)
-            };
+            let instance = provider.create_async(self.clone()).await?;
             Ok(Shared::new(instance))
         };
         #[cfg(feature = "tracing")]

@@ -40,6 +40,9 @@ impl<T: ?Sized + 'static> Provider<T> {
                     }
                 })
             })),
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,
@@ -84,6 +87,9 @@ impl<T: ?Sized + 'static> Provider<T> {
                     }
                 })
             })),
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,
@@ -128,6 +134,9 @@ impl<T: ?Sized + 'static> Provider<T> {
                     }
                 })
             })),
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,
@@ -172,6 +181,9 @@ impl<T: ?Sized + 'static> Provider<T> {
                     }
                 })
             })),
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,

@@ -53,6 +53,8 @@ pub enum ErrorKind {
     ModuleLifecycleFailed,
     /// Dependency graph validation failed.
     GraphValidationFailed,
+    /// A service factory failed to initialize its value.
+    FactoryFailed,
 }
 
 /// Container error structure.
@@ -78,6 +80,14 @@ impl Error {
         error!("{}", error);
 
         error
+    }
+
+    /// Wraps an application initialization failure with its service type.
+    pub fn factory_failed(type_name: &str, details: &str) -> Self {
+        Self::new(
+            ErrorKind::FactoryFailed,
+            format!("Factory failed while creating type {type_name}: {details}"),
+        )
     }
 
     /// Service provider not found for the requested type.

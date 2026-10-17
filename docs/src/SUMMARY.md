@@ -4,6 +4,7 @@
 - [Getting Started](./getting-started.md)
 - [Derive Macros](./derive-macros.md)
 - [Providers And Resolution](./providers-and-resolution.md)
+- [Fallible Factories](./fallible-factories.md)
 - [Modules And Lifecycle](./modules-and-lifecycle.md)
 - [Production Patterns](./production-patterns.md)
 - [Performance](./performance.md)

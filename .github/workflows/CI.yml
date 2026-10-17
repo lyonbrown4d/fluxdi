@@ -29,7 +29,7 @@ jobs:
       - name: Install stable with clippy and rustfmt
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: "1.99.1"
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with:
@@ -52,7 +52,7 @@ jobs:
       - name: Install stable
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: "1.99.1"
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -101,7 +101,7 @@ jobs:
           - macos-latest
           - windows-latest
         rust:
-          - stable
+          - "1.99.1"
           - beta
           - nightly
     runs-on: ${{matrix.os}}
@@ -116,7 +116,7 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Run test on ${{ matrix.os }} OS for ${{ matrix.rust }} toolchain
-        run: cargo test --workspace # this already run doc tests
+        run: cargo +${{ matrix.rust }} test --workspace # includes doc tests
 
   cargo-release:
     name: Run cargo-release (bump, tag, publish)
@@ -131,7 +131,7 @@ jobs:
       - name: Install stable
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: "1.99.1"
           override: true
 
       - name: Install cargo-release

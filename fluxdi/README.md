@@ -14,7 +14,7 @@ A lightweight, type-safe dependency injection container for Rust applications. F
 - 🔗 **Singleton Services**: Shared instances with reference counting via `Arc` / `Rc`
 - 🧭 **Scoped Context**: Per-request/task instances via `create_scope()` + `Provider::scoped(...)`
 - 🔍 **Circular Detection**: Prevents infinite loops in dependency graphs
-- ❌ **Error Handling**: Comprehensive error types with detailed messages
+- ❌ **Error Handling**: Recoverable initialization through `Provider::try_root`, `try_singleton`, `try_scoped`, `try_transient`, and their async variants
 - 📊 **Optional Logging**: Built-in logging initialization and tracing integration
 - 🚀 **Zero-Cost Abstractions**: Feature gates enable compile-time optimization
 - 🧵 **Optional Thread Safety**: Enable `thread-safe` for `Arc` and concurrent storage
@@ -22,6 +22,8 @@ A lightweight, type-safe dependency injection container for Rust applications. F
 - 🏗️ **Enterprise Ready**: Supports layered architecture, repository pattern, and use cases
 
 ## 📦 Installation
+
+The unreleased workspace requires **Rust 1.99.1 or newer**. `rust-toolchain.toml` pins the development toolchain to 1.99.1; all workspace packages declare the same minimum version. The published dependency examples below refer to earlier releases.
 
 Add this to your `Cargo.toml`:
 

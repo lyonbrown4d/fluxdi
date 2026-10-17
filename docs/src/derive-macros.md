@@ -65,10 +65,19 @@ non-`Shared` fields).
 
 ## Generated API
 
-`Injectable` generates:
+The unreleased workspace generates both constructors:
 
-- `impl YourType { pub fn from_injector(injector: &fluxdi::Injector) -> fluxdi::Shared<Self> }`
-- One `injector.resolve::<T>()` call per field typed as `Shared<T>`.
+- `from_injector(&Injector) -> Shared<Self>` keeps the existing panic-on-error behavior.
+- `try_from_injector(&Injector) -> Result<Shared<Self>, fluxdi::Error>` propagates dependency errors using `try_resolve::<T>()?` for each `Shared<T>` field.
+
+Use the fallible constructor with a fallible provider:
+
+```rust
+injector.provide::<AppService>(Provider::try_root(AppService::try_from_injector));
+let service = injector.try_resolve::<AppService>()?;
+```
+
+The methods do not catch user panics. See [Fallible Factories](./fallible-factories.md) for failure caching and retry behavior.
 
 ## Constraints
 

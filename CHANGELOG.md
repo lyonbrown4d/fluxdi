@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Fallible `Provider::try_root`, `try_singleton`, `try_scoped`, `try_transient`, and matching async constructors, returning `Result<Shared<T>, Error>`
+- `Injectable::try_from_injector` for recoverable dependency resolution; the existing `from_injector` constructor still panics on errors
+- `Error::factory_failed` and `ErrorKind::FactoryFailed` for application initialization errors; dependency errors retain their original kind and message
 - Performance docs (`docs/src/performance.md`) with feature impact and benchmark commands
 - **Epic H (continued)**: `BootstrapOptions::with_parallel_start()` for concurrent module `on_start` execution
 - Bootstrap lifecycle error aggregation: `Error::bootstrap_aggregate()` when multiple modules fail during parallel startup
@@ -17,7 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Performance**: Cache-hit resolve skips `ResolveGuard` (no recursion); ~67% faster cached resolve (~20 ns → ~12 ns default)
+- Minimum supported Rust and pinned development/CI baseline are now 1.99.1 across all workspace packages
+- Adding `ErrorKind::FactoryFailed` requires downstream exhaustive matches on `ErrorKind` to handle the new variant
+- Fallible factories cache only successful instances; failed initialization releases resource permits and allows a later caller or waiting caller to retry
+- `Provider::singleton` now caches per calling injector context; clones share that context, while children and new runtime scopes have their own singleton cache
+- Scoped instances belong to the nearest runtime scope; nested scopes isolate their scoped cache and ordinary children share the nearest scope
+
+### Fixed
+
+- Concurrent initialization, async cycle detection, and cancellation/panic cleanup across named, set, and ordinary bindings
+- Lifecycle rollback after configuration/startup failures and cleanup after canceled bootstrap
+- Async decorators, shared sync/async resource limits, and compilation without default features
 
 ## [1.2.2] - 2026-03-21
 

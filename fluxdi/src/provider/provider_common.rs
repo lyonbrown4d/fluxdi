@@ -1,6 +1,24 @@
 use super::*;
 
 impl<T: ?Sized + 'static> Provider<T> {
+    pub(crate) fn create(&self, injector: &Injector) -> Result<Instance<T>, Error> {
+        match &self.try_factory {
+            Some(factory) => factory(injector),
+            None => Ok((self.factory)(injector)),
+        }
+    }
+
+    #[cfg(feature = "async-factory")]
+    pub(crate) async fn create_async(&self, injector: Injector) -> Result<Instance<T>, Error> {
+        if let Some(factory) = &self.try_async_factory {
+            factory(injector).await
+        } else if let Some(factory) = &self.async_factory {
+            Ok(factory(injector).await)
+        } else {
+            self.create(&injector)
+        }
+    }
+
     /// Applies resource limits to this provider.
     pub fn with_limits(mut self, limits: Limits) -> Self {
         self.limits = limits;
@@ -92,6 +110,9 @@ impl<T: ?Sized + 'static> Provider<T> {
         let Self {
             scope,
             factory,
+            try_factory,
+            #[cfg(feature = "async-factory")]
+            try_async_factory,
             #[cfg(feature = "async-factory")]
             async_factory,
             limits,
@@ -99,6 +120,25 @@ impl<T: ?Sized + 'static> Provider<T> {
             limiter,
         } = self;
         let decorator = Shared::new(decorator);
+        let try_factory = try_factory.map(|factory| {
+            let decorator = decorator.clone();
+            Box::new(move |injector: &Injector| {
+                factory(injector).map(|instance| Instance::new(decorator(instance.value())))
+            }) as TryFactory<T>
+        });
+        #[cfg(feature = "async-factory")]
+        let try_async_factory = try_async_factory.map(|factory| {
+            let decorator = decorator.clone();
+            Box::new(move |injector| {
+                let future = factory(injector);
+                let decorator = decorator.clone();
+                Box::pin(async move {
+                    future
+                        .await
+                        .map(|instance| Instance::new(decorator(instance.value())))
+                }) as Pin<Box<dyn Future<Output = Result<Instance<T>, Error>>>>
+            }) as TryAsyncFactory<T>
+        });
         #[cfg(feature = "async-factory")]
         let async_factory = async_factory.map(|factory| {
             let decorator = decorator.clone();
@@ -115,6 +155,9 @@ impl<T: ?Sized + 'static> Provider<T> {
                 let instance = factory(inj);
                 Instance::new(decorator(instance.value()))
             }),
+            try_factory,
+            #[cfg(feature = "async-factory")]
+            try_async_factory,
             #[cfg(feature = "async-factory")]
             async_factory,
             limits,
@@ -132,6 +175,9 @@ impl<T: ?Sized + 'static> Provider<T> {
         let Self {
             scope,
             factory,
+            try_factory,
+            #[cfg(feature = "async-factory")]
+            try_async_factory,
             #[cfg(feature = "async-factory")]
             async_factory,
             limits,
@@ -139,6 +185,26 @@ impl<T: ?Sized + 'static> Provider<T> {
             limiter,
         } = self;
         let decorator = Shared::new(decorator);
+        let try_factory = try_factory.map(|factory| {
+            let decorator = decorator.clone();
+            Box::new(move |injector: &Injector| {
+                factory(injector).map(|instance| Instance::new(decorator(instance.value())))
+            }) as TryFactory<T>
+        });
+        #[cfg(feature = "async-factory")]
+        let try_async_factory = try_async_factory.map(|factory| {
+            let decorator = decorator.clone();
+            Box::new(move |injector| {
+                let future = factory(injector);
+                let decorator = decorator.clone();
+                Box::pin(async move {
+                    future
+                        .await
+                        .map(|instance| Instance::new(decorator(instance.value())))
+                })
+                    as Pin<Box<dyn Future<Output = Result<Instance<T>, Error>> + Send>>
+            }) as TryAsyncFactory<T>
+        });
         #[cfg(feature = "async-factory")]
         let async_factory = async_factory.map(|factory| {
             let decorator = decorator.clone();
@@ -155,6 +221,9 @@ impl<T: ?Sized + 'static> Provider<T> {
                 let instance = factory(inj);
                 Instance::new(decorator(instance.value()))
             }),
+            try_factory,
+            #[cfg(feature = "async-factory")]
+            try_async_factory,
             #[cfg(feature = "async-factory")]
             async_factory,
             limits,

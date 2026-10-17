@@ -83,6 +83,9 @@ impl<T: ?Sized + 'static> Provider<T> {
             }),
             #[cfg(feature = "async-factory")]
             async_factory: None,
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,
@@ -111,6 +114,9 @@ impl<T: ?Sized + 'static> Provider<T> {
             factory: Box::new(move |injector| Instance::new(factory(injector))),
             #[cfg(feature = "async-factory")]
             async_factory: None,
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,
@@ -190,6 +196,9 @@ impl<T: ?Sized + 'static> Provider<T> {
             }),
             #[cfg(feature = "async-factory")]
             async_factory: None,
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,
@@ -269,6 +278,9 @@ impl<T: ?Sized + 'static> Provider<T> {
             }),
             #[cfg(feature = "async-factory")]
             async_factory: None,
+            try_factory: None,
+            #[cfg(feature = "async-factory")]
+            try_async_factory: None,
             limits: Limits::default(),
             dependency_hints: Vec::new(),
             limiter: None,

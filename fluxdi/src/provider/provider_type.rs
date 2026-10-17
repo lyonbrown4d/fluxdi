@@ -56,6 +56,11 @@ pub struct Provider<T: ?Sized + 'static> {
     /// Optional resource limits for this provider factory.
     pub limits: Limits,
 
+    pub(super) try_factory: Option<TryFactory<T>>,
+
+    #[cfg(feature = "async-factory")]
+    pub(super) try_async_factory: Option<TryAsyncFactory<T>>,
+
     pub(crate) dependency_hints: Vec<DependencyHint>,
 
     pub(super) limiter: Option<Shared<Limiter>>,

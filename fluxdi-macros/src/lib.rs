@@ -49,9 +49,13 @@ fn expand_injectable(input: &DeriveInput) -> syn::Result<proc_macro2::TokenStrea
     Ok(quote! {
         impl #ident {
             pub fn from_injector(injector: &::fluxdi::Injector) -> ::fluxdi::Shared<Self> {
-                ::fluxdi::Shared::new(Self {
+                Self::try_from_injector(injector).unwrap_or_else(|error| panic!("{}", error))
+            }
+
+            pub fn try_from_injector(injector: &::fluxdi::Injector) -> ::std::result::Result<::fluxdi::Shared<Self>, ::fluxdi::Error> {
+                Ok(::fluxdi::Shared::new(Self {
                     #(#resolved_fields),*
-                })
+                }))
             }
         }
     })
@@ -68,7 +72,7 @@ fn field_initializer(field: &Field) -> syn::Result<proc_macro2::TokenStream> {
     })?;
 
     Ok(quote! {
-        #field_ident: injector.resolve::<#dependency_ty>()
+        #field_ident: injector.try_resolve::<#dependency_ty>()?
     })
 }
 
