@@ -4,16 +4,18 @@
 
 FluxDI 是面向 Rust 的类型安全依赖注入容器。核心独立于 HTTP 框架；Axum 和 Actix-web 适配器均为可选功能。
 
-本 README 介绍**尚未发布的工作区**，要求 **Rust 1.99.1 或更新版本**。核心与宏变更需要协调发布后才能从 registry 安装。[中文手册](../docs/zh-CN/src/introduction.md)是正式参考。
+FluxDI **2.0.0** 要求 **Rust 1.99.1 或更新版本**。核心与宏 crate 使用同一 2.0.0 版本边界；启用 `macros` 时精确依赖 `fluxdi-macros` 2.0.0。[中文手册](../docs/zh-CN/src/introduction.md)是正式参考。
 
-## 本地依赖
+## 安装
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi" }
+fluxdi = "2.0.0"
 ```
 
 添加 `features = ["macros"]`，即可使用 `Injectable` 和 `static_module!`；也可以按需选择下方的异步工厂、线程安全、适配器和可观测性 feature。
+
+本地开发时，可将 registry 版本替换为 `path = "../fluxdi"`。从 1.x 升级前，请阅读 [2.0 迁移说明](../CHANGELOG.zh-CN.md#200---2026-10-18)。
 
 ## 手动注册
 

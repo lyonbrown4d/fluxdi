@@ -703,7 +703,7 @@ dependencies = [
 
 [[package]]
 name = "fluxdi"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "futures",
  "tracing",
@@ -1896,7 +1896,7 @@ dependencies = [
 
 [[package]]
 name = "seaorm-sqlite-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
  "sea-orm",

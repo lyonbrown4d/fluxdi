@@ -10,6 +10,7 @@
 - [Production Patterns](./production-patterns.md)
 - [Performance](./performance.md)
 - [Dependency Audit](./dependency-audit.md)
+- [Local Release](./local-release.md)
 - [Decorators](./decorators.md)
 - [Async And Mixed Usage](./async-and-mixed.md)
 - [Graph Tooling](./graph-tooling.md)

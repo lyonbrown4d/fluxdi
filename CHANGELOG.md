@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-18
+
+### Migrating from 1.x
+
+- Upgrade the toolchain to Rust 1.99.1 or newer. Use `fluxdi` 2.0.0 and its matching `fluxdi-macros` 2.0.0; the core pins that macro version exactly.
+- Add arms for `ErrorKind::FactoryFailed` and `DependencyCardinality::Optional` to exhaustive matches.
+- Review `Provider::singleton` / `Scope::Module` assumptions: values are cached per calling injector context. Clones share the cache; children and new runtime scopes have their own singleton cache. Use `Provider::root` / `Scope::Root` for sharing throughout an injector tree.
+- Reserve the derive-generated inherent method names `from_injector`, `try_from_injector`, `provider`, and `with_injected_dependencies`; rename conflicting application methods. Static modules also reserve `new`, `create_child`, `create_scope`, `in_context`, `injector`, `clone`, `default`, and generated hidden export method names.
+
 ### Added
 
 - Native Rust `cfg`/`cfg_attr` conditions in static modules, selected before semantic graph validation
@@ -50,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated locked Actix dependencies; its remaining `h2 0.3` advisory is tracked in `docs/src/dependency-audit.md` and remains visible to cargo-deny
 
 - Downstream exhaustive matches on `DependencyCardinality` must handle `Optional`; derived types must reserve the generated `provider` and `with_injected_dependencies` method names
-- The extended macro requires the updated core APIs. Before publishing, coordinate a major release of both crates so older core releases with a `^1.x` macro dependency cannot select incompatible generated code
+- The core and macro crates share the 2.0.0 major version boundary. The core depends on exactly `fluxdi-macros` 2.0.0, preventing older core releases with a `^1.x` macro dependency from selecting incompatible generated code
 - Concurrent benchmark groups now explicitly distinguish persistent workers from per-iteration thread startup; old combined measurements should not be compared as cached-resolution timings
 - Minimum supported Rust and pinned development/CI baseline are now 1.99.1 across all workspace packages
 - Adding `ErrorKind::FactoryFailed` requires downstream exhaustive matches on `ErrorKind` to handle the new variant
@@ -127,8 +136,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Metrics and Prometheus export
 - Logging and tracing integration
 
-[Unreleased]: https://github.com/DaiYuANg/fluxdi/compare/v1.2.2...HEAD
-[1.2.2]: https://github.com/DaiYuANg/fluxdi/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/DaiYuANg/fluxdi/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/DaiYuANg/fluxdi/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/DaiYuANg/fluxdi/releases/tag/v1.1.0
+[Unreleased]: https://github.com/lyonbrown4d/fluxdi/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/lyonbrown4d/fluxdi/compare/v1.2.2...v2.0.0
+[1.2.2]: https://github.com/lyonbrown4d/fluxdi/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/lyonbrown4d/fluxdi/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/lyonbrown4d/fluxdi/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/lyonbrown4d/fluxdi/releases/tag/v1.1.0

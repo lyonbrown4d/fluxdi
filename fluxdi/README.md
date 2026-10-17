@@ -5,19 +5,22 @@
 FluxDI is a type-safe dependency injection container for Rust. The core is
 independent of HTTP frameworks; Axum and Actix-web adapters are optional.
 
-This README describes the **unreleased workspace**, requiring **Rust 1.99.1 or
-newer**. The core and macro changes need a coordinated release before registry installation.
+FluxDI **2.0.0** requires **Rust 1.99.1 or newer**. The core and macro crates
+share the 2.0.0 release boundary; enabling `macros` selects exactly `fluxdi-macros` 2.0.0.
 The [English book](../docs/src/introduction.md) is the canonical reference.
 
-## Local dependency
+## Install
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi" }
+fluxdi = "2.0.0"
 ```
 
 Add `features = ["macros"]` for `Injectable` and `static_module!`, or select the
 features below for async factories, thread safety, adapters, and instrumentation.
+
+For local development, replace the registry version with `path = "../fluxdi"`.
+Before upgrading from 1.x, read the [2.0 migration notes](../CHANGELOG.md#200---2026-10-18).
 
 ## Manual registration
 

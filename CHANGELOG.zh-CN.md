@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-18
+
+### 从 1.x 迁移
+
+- 将工具链升级到 Rust 1.99.1 或更新版本。使用 `fluxdi` 2.0.0 及对应的 `fluxdi-macros` 2.0.0；核心对该宏版本使用精确依赖。
+- 对 `ErrorKind` 和 `DependencyCardinality` 做穷尽匹配时，分别补充 `FactoryFailed` 和 `Optional` 分支。
+- 检查对 `Provider::singleton` / `Scope::Module` 的使用：实例按调用方注入器上下文缓存。克隆共享缓存；子级和新运行时作用域拥有各自的单例缓存。需要在整棵注入器树中共享时，使用 `Provider::root` / `Scope::Root`。
+- 为 derive 生成的固有方法 `from_injector`、`try_from_injector`、`provider` 和 `with_injected_dependencies` 预留名称，重命名有冲突的应用方法。静态模块还预留 `new`、`create_child`、`create_scope`、`in_context`、`injector`、`clone`、`default` 及生成的隐藏导出方法名。
+
 ### 新增
 
 - 静态模块支持原生 Rust `cfg`/`cfg_attr` 条件，在依赖图语义检查前选择启用的声明
@@ -50,7 +59,7 @@
 - 更新锁定的 Actix 依赖；其剩余的 `h2 0.3` 公告已记录在 `docs/src/dependency-audit.md`，并继续由 cargo-deny 显示
 
 - 下游对 `DependencyCardinality` 的穷尽匹配必须处理 `Optional`；派生类型必须为生成的 `provider` 和 `with_injected_dependencies` 方法名保留名称
-- 扩展宏要求使用更新后的核心 API。发布前，请协调两个 crate 的主版本发布，以免依赖 `^1.x` 宏版本的旧版核心选择到不兼容的生成代码
+- 核心与宏 crate 使用同一 2.0.0 主版本边界。核心精确依赖 `fluxdi-macros` 2.0.0，旧核心的 `^1.x` 宏依赖不会选到不兼容的生成代码
 - 并发基准测试组现在明确区分持久工作线程和每轮启动线程；旧的合并测量结果不应与缓存解析耗时进行比较
 - 所有工作区软件包的最低支持 Rust 版本和锁定的开发/CI 基线现为 1.99.1
 - 新增 `ErrorKind::FactoryFailed` 后，下游对 `ErrorKind` 的穷尽匹配必须处理这个新变体
@@ -127,8 +136,9 @@
 - 提供指标和 Prometheus 导出
 - 集成日志和 tracing
 
-[Unreleased]: https://github.com/DaiYuANg/fluxdi/compare/v1.2.2...HEAD
-[1.2.2]: https://github.com/DaiYuANg/fluxdi/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/DaiYuANg/fluxdi/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/DaiYuANg/fluxdi/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/DaiYuANg/fluxdi/releases/tag/v1.1.0
+[Unreleased]: https://github.com/lyonbrown4d/fluxdi/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/lyonbrown4d/fluxdi/compare/v1.2.2...v2.0.0
+[1.2.2]: https://github.com/lyonbrown4d/fluxdi/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/lyonbrown4d/fluxdi/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/lyonbrown4d/fluxdi/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/lyonbrown4d/fluxdi/releases/tag/v1.1.0

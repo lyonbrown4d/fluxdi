@@ -1,9 +1,9 @@
 # 静态模块
 
-尚未发布的 `static_module!` 宏提供显式的类型化组装，支持按绑定选择模块导入、Rust 原生条件、可选参数、集合参数，以及同步和异步工厂。需要启用 `macros`；异步依赖图还要求 `async-factory`。核心仍然独立于 HTTP 框架。
+FluxDI 2.0.0 的 `static_module!` 宏提供显式的类型化组装，支持按绑定选择模块导入、Rust 原生条件、可选参数、集合参数，以及同步和异步工厂。需要启用 `macros`；异步依赖图还要求 `async-factory`。核心仍然独立于 HTTP 框架。
 
 ```toml
-fluxdi = { path = "../fluxdi", features = ["macros"] }
+fluxdi = { version = "2.0.0", features = ["macros"] }
 ```
 
 ## 声明依赖图
@@ -148,7 +148,7 @@ let shared_tree = app.in_context(data.injector());
 ## 异步工厂
 
 ```toml
-fluxdi = { path = "../fluxdi", features = ["macros", "async-factory"] }
+fluxdi = { version = "2.0.0", features = ["macros", "async-factory"] }
 ```
 
 工厂自身返回 future 时，使用 `async` 声明：
@@ -221,7 +221,7 @@ let service = app.service().await?;
 
 导入的模块组成封闭的有向无环依赖图：来源模块不能反向依赖导入方。尚不支持自动发现、按类型隐式选择可选依赖或集合、循环模块导入，以及生命周期启动与关闭排序。`Injectable` 仍是独立的运行时容器派生 API；静态组装尚不等同于完整 CDI。
 
-`new`、`create_child`、`create_scope`、`in_context`、`injector`、`clone` 和 `default` 是保留绑定名称；与生成的隐藏导出方法重名的绑定也会被拒绝。生成的隐藏提供者和元数据辅助方法供内部组装使用，不属于应用 API。不支持模块泛型。模块和导入块支持文档属性与原生条件属性；局部工厂还支持 `#[scope(...)]` 和 `#[set(...)]`。外部绑定与导入绑定支持 `#[set(...)]`，但不能覆盖来源作用域。发布本 API 时，应同时发布核心 crate 和宏 crate。
+`new`、`create_child`、`create_scope`、`in_context`、`injector`、`clone` 和 `default` 是保留绑定名称；与生成的隐藏导出方法重名的绑定也会被拒绝。生成的隐藏提供者和元数据辅助方法供内部组装使用，不属于应用 API。不支持模块泛型。模块和导入块支持文档属性与原生条件属性；局部工厂还支持 `#[scope(...)]` 和 `#[set(...)]`。外部绑定与导入绑定支持 `#[set(...)]`，但不能覆盖来源作用域。核心与宏 crate 使用同一 2.0.0 版本边界；启用 `macros` 时，核心精确依赖 `fluxdi-macros` 2.0.0。
 
 将静态模块接入请求作用域的方法参见 [Web 集成](./web-integrations.md)。运行可执行示例：
 

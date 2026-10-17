@@ -1,12 +1,12 @@
 # 派生宏
 
-尚未发布的工作区扩展了 `#[derive(Injectable)]`，支持泛型、命名绑定、可选依赖、集合依赖及推断出的依赖图提示。要求 Rust 1.99.1 或更新版本。
+FluxDI 2.0.0 扩展了 `#[derive(Injectable)]`，支持泛型、命名绑定、可选依赖、集合依赖及推断出的依赖图提示。要求 Rust 1.99.1 或更新版本。
 
-本地工作区用法：
+通过对应版本的核心 crate 启用宏：
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi", features = ["macros"] }
+fluxdi = { version = "2.0.0", features = ["macros"] }
 ```
 
 ## 注册派生服务

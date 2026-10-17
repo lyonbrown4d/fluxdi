@@ -2,12 +2,14 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-FluxDI **尚未发布工作区**的过程宏，要求 **Rust 1.99.1 或更新版本**。核心与宏需要协调发布后才能从 registry 安装。本地开发时通过 `fluxdi` 启用宏：
+FluxDI **2.0.0** 的过程宏，要求 **Rust 1.99.1 或更新版本**。通过 `fluxdi` 启用宏，即可精确依赖 `fluxdi-macros` 2.0.0：
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi", features = ["macros"] }
+fluxdi = { version = "2.0.0", features = ["macros"] }
 ```
+
+本地开发时，可将 `version = "2.0.0"` 替换为 `path = "../fluxdi"`。从 1.x 升级前，请阅读 [2.0 迁移说明](../CHANGELOG.zh-CN.md#200---2026-10-18)，并为生成的方法名预留名称。
 
 ## 运行时容器派生宏
 

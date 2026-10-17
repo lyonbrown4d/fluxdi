@@ -1,12 +1,12 @@
 # Derive Macros
 
-The unreleased workspace extends `#[derive(Injectable)]` with generics, named bindings, optional dependencies, set dependencies, and inferred graph hints. It requires Rust 1.99.1 or newer.
+FluxDI 2.0.0 extends `#[derive(Injectable)]` with generics, named bindings, optional dependencies, set dependencies, and inferred graph hints. It requires Rust 1.99.1 or newer.
 
-For local workspace usage:
+Enable the macros through the matching core release:
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi", features = ["macros"] }
+fluxdi = { version = "2.0.0", features = ["macros"] }
 ```
 
 ## Register a Derived Service

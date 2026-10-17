@@ -1,5 +1,6 @@
 [package]
 name = "dual-http-random-port-example"
+publish = false
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

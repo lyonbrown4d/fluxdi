@@ -2,19 +2,30 @@
 
 ## Install
 
-This guide describes the unreleased checkout, requiring **Rust 1.99.1 or newer**.
-`rust-toolchain.toml` pins that stable version. Use the local crate until the core and
-macro changes receive a coordinated release:
+FluxDI **2.0.0** requires **Rust 1.99.1 or newer**. The repository
+`rust-toolchain.toml` pins that stable version. Install the core with its default
+synchronous features:
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi" }
+fluxdi = "2.0.0"
 ```
+
+For local development, replace the registry version with `path = "../fluxdi"`.
+The core and macro crates use the same 2.0.0 boundary; enabling `macros` selects
+exactly `fluxdi-macros` 2.0.0.
 
 Direct dependency versions are maintained in root `[workspace.dependencies]`.
 The SeaORM SQLite example is an independent workspace because its native SQLite
 binding range differs from the latest rusqlite used by the complex example.
 Run it with `cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked`.
+
+## Migrating from 1.x
+
+- Upgrade the toolchain to Rust 1.99.1 or newer. Use `fluxdi` 2.0.0 and its matching `fluxdi-macros` 2.0.0; the core pins that macro version exactly.
+- Add arms for `ErrorKind::FactoryFailed` and `DependencyCardinality::Optional` to exhaustive matches.
+- Review `Provider::singleton` / `Scope::Module` assumptions: values are cached per calling injector context. Clones share the cache; children and new runtime scopes have their own singleton cache. Use `Provider::root` / `Scope::Root` for sharing throughout an injector tree.
+- Reserve the derive-generated inherent method names `from_injector`, `try_from_injector`, `provider`, and `with_injected_dependencies`; rename conflicting application methods. Static modules also reserve `new`, `create_child`, `create_scope`, `in_context`, `injector`, `clone`, `default`, and generated hidden export method names.
 
 ## Minimal Example
 
@@ -63,7 +74,7 @@ RUST_LOG=fluxdi=trace cargo run -p basic
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi", features = ["macros"] }
+fluxdi = { version = "2.0.0", features = ["macros"] }
 ```
 
 Then:

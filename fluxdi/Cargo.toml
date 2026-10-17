@@ -21,7 +21,7 @@ tracing-opentelemetry = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true, features = ["env-filter", "fmt"] }
 dashmap = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["sync", "time", "rt", "rt-multi-thread"], optional = true }
-fluxdi-macros = { path = "../fluxdi-macros", optional = true, version = "1.2.2" }
+fluxdi-macros = { path = "../fluxdi-macros", optional = true, version = "=2.0.0" }
 futures.workspace = true
 
 [features]

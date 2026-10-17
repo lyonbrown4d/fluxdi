@@ -2,14 +2,17 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-Procedural macros for FluxDI's **unreleased workspace**, requiring **Rust 1.99.1 or
-newer**. Coordinate the core and macro release before registry installation. Enable
-macros through `fluxdi` during local development:
+Procedural macros for FluxDI **2.0.0**, requiring **Rust 1.99.1 or newer**.
+Enable macros through `fluxdi`, which selects exactly `fluxdi-macros` 2.0.0:
 
 ```toml
 [dependencies]
-fluxdi = { path = "../fluxdi", features = ["macros"] }
+fluxdi = { version = "2.0.0", features = ["macros"] }
 ```
+
+For local development, replace `version = "2.0.0"` with `path = "../fluxdi"`.
+Before upgrading from 1.x, read the [2.0 migration notes](../CHANGELOG.md#200---2026-10-18),
+including the generated method name reservations.
 
 ## Runtime-container derive
 

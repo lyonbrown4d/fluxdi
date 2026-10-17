@@ -56,8 +56,9 @@ portable performance guarantees. See [Derive Macros](./derive-macros.md) and
 [Performance](./performance.md).
 
 `DependencyCardinality::Optional` affects exhaustive matches. Generated method names
-must be reserved. Coordinate a major release of the core and macros before publishing
-the new APIs, so older core versions cannot select incompatible macro-generated code.
+must be reserved. This batch required a coordinated major version boundary.
+That boundary is now 2.0.0 for the core and macros, with the core selecting exactly
+`fluxdi-macros` 2.0.0; older core versions with a `^1.x` dependency cannot select it.
 
 ## Batch 4: static assembly, HTTP scopes and maintenance
 

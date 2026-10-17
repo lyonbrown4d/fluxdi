@@ -6,9 +6,20 @@ Framework-independent dependency injection for Rust, with an explicit compile-ti
 assembly API and a dynamic runtime container. Optional Axum and Actix integrations
 provide HTTP request scopes.
 
-This checkout is unreleased and requires Rust 1.99.1. Read the
+FluxDI 2.0.0 requires Rust 1.99.1 or newer. Read the
 [crate guide](./fluxdi/README.md), [English book](./docs/src/introduction.md), or
 [Chinese book](./docs/zh-CN/src/introduction.md).
+
+Install the core with its default synchronous features:
+
+```toml
+[dependencies]
+fluxdi = "2.0.0"
+```
+
+Enable `features = ["macros"]` for `Injectable` and `static_module!`.
+See the [2.0 migration notes](./CHANGELOG.md#200---2026-10-18) before upgrading from 1.x.
+For local development, run from the repository root:
 
 ```bash
 cargo test --workspace --all-features --locked
@@ -36,3 +47,4 @@ Every English chapter must have a Chinese counterpart for the build to pass.
 See the [dependency audit](./docs/src/dependency-audit.md) for verified results
 and the remaining upstream advisory.
 Release notes are available in the [changelog](./CHANGELOG.md).
+Maintainers can follow the [local release guide](./docs/src/local-release.md).

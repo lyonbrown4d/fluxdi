@@ -48,7 +48,7 @@
 
 本批本地验收：workspace 全功能测试共 244 项通过；10 个 feature 组合全部通过；workspace 全目标、全功能 Clippy、关闭默认 feature 的 Clippy 及单线程异步宏配置的 Clippy 通过；Rust API 文档构建、mdBook 0.5.4 站点构建、宏示例运行、格式和文档本地链接检查通过。常驻线程并发等基准已完成 release 短测；本机结果不作为跨平台性能保证。
 
-宏语法和使用限制见[derive 说明](./derive-macros.md)，测量方法及本机结果见[性能说明](./performance.md)。新增的 `DependencyCardinality::Optional` 需要下游穷尽匹配补充分支，derive 类型需预留生成方法名。宏生成代码依赖同批 core API；正式发布前需协调两个 crate 的大版本，避免旧 core 的 `^1.x` 依赖选到不兼容的宏。
+宏语法和使用限制见[derive 说明](./derive-macros.md)，测量方法及本机结果见[性能说明](./performance.md)。新增的 `DependencyCardinality::Optional` 需要下游穷尽匹配补充分支，derive 类型需预留生成方法名。宏生成代码依赖同批 core API，因此本批需要协调两个 crate 的主版本。当前已将核心与宏的版本边界设为 2.0.0，核心精确依赖 `fluxdi-macros` 2.0.0；旧核心的 `^1.x` 依赖不会选到该宏版本。
 
 后续评估已整理到性能说明：冻结容器前需要确定注册和覆盖边界，生命周期依赖校验需要模块归属与启动顺序元数据，内存占用需要按容器层次和 scope 数量测量。本批交付宏扩展和测量基准，冻结容器、生命周期约束和性能优化保留为后续事项。
 

@@ -10,6 +10,7 @@
 - [生产环境模式](./production-patterns.md)
 - [性能](./performance.md)
 - [依赖审计](./dependency-audit.md)
+- [本地发布](./local-release.md)
 - [装饰器](./decorators.md)
 - [异步与混合使用](./async-and-mixed.md)
 - [依赖图工具](./graph-tooling.md)

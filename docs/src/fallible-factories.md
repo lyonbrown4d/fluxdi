@@ -1,6 +1,6 @@
 # Fallible Factories
 
-These APIs are available in the unreleased workspace, which requires Rust 1.99.1 or newer.
+These APIs are part of FluxDI 2.0.0, which requires Rust 1.99.1 or newer.
 
 ## Synchronous Initialization
 

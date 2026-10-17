@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "actix"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "actix-web",
  "fluxdi",
@@ -246,7 +246,7 @@ checksum = "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
 
 [[package]]
 name = "async-factory-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
  "tokio",
@@ -310,7 +310,7 @@ dependencies = [
 
 [[package]]
 name = "axum"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "axum 0.8.9",
  "complex",
@@ -345,7 +345,7 @@ dependencies = [
 
 [[package]]
 name = "axum-lifecycle"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "axum 0.8.9",
  "fluxdi",
@@ -360,7 +360,7 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
 name = "basic"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]
@@ -511,7 +511,7 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
 name = "complex"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "async-trait",
  "fluxdi",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "decorator-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]
@@ -720,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "dual-http-random-port-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "axum 0.8.9",
  "fluxdi",
@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "fluxdi"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "actix-web",
  "axum 0.8.9",
@@ -814,7 +814,7 @@ dependencies = [
 
 [[package]]
 name = "fluxdi-macros"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -956,7 +956,7 @@ dependencies = [
 
 [[package]]
 name = "graph-tooling-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]
@@ -1245,7 +1245,7 @@ dependencies = [
 
 [[package]]
 name = "injectable-macro-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]
@@ -1404,7 +1404,7 @@ dependencies = [
 
 [[package]]
 name = "module-async-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
  "tokio",
@@ -1412,7 +1412,7 @@ dependencies = [
 
 [[package]]
 name = "module-mixed-sync-async-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
  "tokio",
@@ -1420,14 +1420,14 @@ dependencies = [
 
 [[package]]
 name = "module-sync-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]
 
 [[package]]
 name = "multi-binding-pipeline-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]
@@ -1440,7 +1440,7 @@ checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
 
 [[package]]
 name = "named-bindings-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]
@@ -1818,7 +1818,7 @@ dependencies = [
 
 [[package]]
 name = "scoped-context-example"
-version = "1.2.2"
+version = "2.0.0"
 dependencies = [
  "fluxdi",
 ]

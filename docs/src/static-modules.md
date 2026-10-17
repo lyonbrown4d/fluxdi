@@ -1,12 +1,12 @@
 # Static Modules
 
-The unreleased `static_module!` macro provides explicit typed assembly, selected
+The FluxDI 2.0.0 `static_module!` macro provides explicit typed assembly, selected
 module imports, native Rust conditions, optional and collection arguments, and
 synchronous or asynchronous factories. Enable `macros`; async
 graphs also require `async-factory`. The core remains independent of HTTP frameworks.
 
 ```toml
-fluxdi = { path = "../fluxdi", features = ["macros"] }
+fluxdi = { version = "2.0.0", features = ["macros"] }
 ```
 
 ## Declare the graph
@@ -203,7 +203,7 @@ same source instance share provider identities within the importing context.
 ## Asynchronous factories
 
 ```toml
-fluxdi = { path = "../fluxdi", features = ["macros", "async-factory"] }
+fluxdi = { version = "2.0.0", features = ["macros", "async-factory"] }
 ```
 
 Declare `async` when the factory itself returns a future:
@@ -320,7 +320,8 @@ application API. Module generics are rejected. Modules and import blocks accept
 documentation and native condition attributes.
 Local factories also accept `#[scope(...)]` and `#[set(...)]`; external and imported
 bindings accept `#[set(...)]` but cannot override their source scope.
-Publish the core and macro crates together when releasing this API.
+The core and macro crates share the 2.0.0 release boundary; the core
+selects exactly `fluxdi-macros` 2.0.0 when `macros` is enabled.
 
 See [Web Integrations](./web-integrations.md) for bridging a static module into a
 request scope. Run the executable example with:
