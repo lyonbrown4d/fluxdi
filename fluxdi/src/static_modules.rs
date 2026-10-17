@@ -1,7 +1,7 @@
 //! Statically assembled dependency graphs with explicit binding keys.
 //!
 //! [`crate::static_module!`] generates typed getters and a constructor taking
-//! external values in declaration order. Each factory receives the listed
+//! imports and external values in declaration order. Each sync factory receives the listed
 //! dependencies as [`crate::Shared`] values and returns `Result<Shared<T>, Error>`.
 //! Bindings can be declared before their dependencies. Different keys may have
 //! the same Rust type.
@@ -25,6 +25,57 @@
 //! assert!(Shared::ptr_eq(&app.size()?, &app.clone().size()?));
 //! # Ok::<(), Error>(())
 //! ```
+//!
+//! Import blocks select exports by binding key. `local: Type = source` renames
+//! an export; omitting `= source` selects the same key. Module paths may be
+//! qualified Rust paths. Imports and external values become constructor
+//! arguments in their textual declaration order:
+//!
+//! ```
+//! use fluxdi::{Error, Shared, static_module};
+//! fn length(text: Shared<String>) -> Result<Shared<usize>, Error> {
+//!     Ok(Shared::new(text.len()))
+//! }
+//! static_module! {
+//!     struct Data {
+//!         external text: String;
+//!         length: usize = length(text);
+//!     }
+//! }
+//! static_module! {
+//!     struct App {
+//!         import data: Data { size: usize = length; };
+//!         external label: String;
+//!     }
+//! }
+//! let data = Data::new(Shared::new("configured".into()));
+//! let app = App::new(data.clone(), Shared::new("app".into()));
+//! assert_eq!(*app.size()?, 10);
+//! # Ok::<(), Error>(())
+//! ```
+//!
+//! Imports retain selected provider handles, including their original scopes
+//! and identity. Reexporting an imported binding preserves these properties.
+//! Multiple imports of the same provider share its cache within one context.
+//! `new` always creates a fresh root context: it does not adopt an imported
+//! module's injector or retain that module's context and unselected bindings.
+//! To reuse an existing tree and its caches, use
+//! `app.in_context(data.injector())` explicitly. Each source graph is closed;
+//! its factories cannot depend on bindings from an importing graph.
+//!
+//! Async bindings require the `async-factory` feature in addition to `macros`.
+//! Declare `async value: Type = factory(dependencies);` when the factory returns
+//! a future producing `Result<Shared<Type>, Error>`. A synchronous factory
+//! depending on an async binding is automatically promoted: its getter is
+//! async, while the factory itself remains synchronous. Promotion propagates
+//! through the dependency graph. In an import block, explicitly mark every
+//! effectively async export with `async`, including promoted exports.
+//!
+//! Constructors stay synchronous and lazy. Async getters resolve dependencies
+//! sequentially in the factory's argument order and use the same cache,
+//! cancellation, and retry rules as typed async provider resolution. Without
+//! `thread-safe`, factories may return futures that are not `Send`; with it,
+//! factory futures must satisfy the provider's `Send` bound.
 //!
 //! The default scope is `singleton`, which caches per resolving injector
 //! context. `#[scope(root)]` shares across contexts, `#[scope(scoped)]` caches
@@ -131,3 +182,148 @@
 //!     }
 //! }
 //! ```
+//!
+//! Selecting a missing export is a compile error:
+//!
+//! ```compile_fail,E0599
+//! use fluxdi::{Shared, static_module};
+//! static_module! { struct Data { external value: u32; } }
+//! static_module! {
+//!     struct App { import data: Data { missing: u32; }; }
+//! }
+//! ```
+//!
+//! Import types must match the selected source binding:
+//!
+//! ```compile_fail,E0308
+//! use fluxdi::{Shared, static_module};
+//! static_module! { struct Data { external value: u32; } }
+//! static_module! {
+//!     struct App { import data: Data { value: String; }; }
+//! }
+//! ```
+//!
+//! Root safety follows imported dependencies, including transient source
+//! bindings that capture contextual values:
+//!
+//! ```compile_fail,E0080
+//! use fluxdi::{Error, Shared, static_module};
+//! fn make() -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+//! fn identity(value: Shared<u32>) -> Result<Shared<u32>, Error> { Ok(value) }
+//! static_module! {
+//!     struct Data {
+//!         #[scope(scoped)] request: u32 = make();
+//!         #[scope(transient)] bridge: u32 = identity(request);
+//!     }
+//! }
+//! static_module! {
+//!     struct App {
+//!         import data: Data { bridge: u32; };
+//!         #[scope(root)] root: u32 = identity(bridge);
+//!     }
+//! }
+//! ```
+//!
+//! Reexports and local transient bridges cannot hide contextual capture:
+//!
+//! ```compile_fail,E0080
+//! use fluxdi::{Error, Shared, static_module};
+//! fn make() -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+//! fn identity(value: Shared<u32>) -> Result<Shared<u32>, Error> { Ok(value) }
+//! static_module! { struct Data { value: u32 = make(); } }
+//! static_module! {
+//!     struct Facade { import data: Data { value: u32; }; }
+//! }
+//! static_module! {
+//!     struct App {
+//!         import facade: Facade { value: u32; };
+//!         #[scope(transient)] bridge: u32 = identity(value);
+//!         #[scope(root)] root: u32 = identity(bridge);
+//!     }
+//! }
+//! ```
+#![cfg_attr(
+    feature = "async-factory",
+    doc = r#"
+Async source factories and promoted sync factories compose through typed imports:
+
+```
+use fluxdi::{Error, Shared, static_module};
+async fn load() -> Result<Shared<u32>, Error> { Ok(Shared::new(40)) }
+fn increment(value: Shared<u32>) -> Result<Shared<u32>, Error> {
+    Ok(Shared::new(*value + 1))
+}
+static_module! {
+    struct Data {
+        async value: u32 = load();
+        promoted: u32 = increment(value);
+    }
+}
+static_module! {
+    struct App {
+        import data: Data { async selected: u32 = promoted; };
+        result: u32 = increment(selected);
+    }
+}
+let app = App::new(Data::new());
+assert_eq!(*futures::executor::block_on(app.result())?, 42);
+# Ok::<(), Error>(())
+```
+
+Async metadata is checked in both directions. A promoted source export must
+be imported as async:
+
+```compile_fail,E0080
+use fluxdi::{Error, Shared, static_module};
+async fn make() -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+fn identity(value: Shared<u32>) -> Result<Shared<u32>, Error> { Ok(value) }
+static_module! {
+    struct Data {
+        async value: u32 = make();
+        promoted: u32 = identity(value);
+    }
+}
+static_module! {
+    struct App { import data: Data { promoted: u32; }; }
+}
+```
+
+A synchronous source export cannot be marked async in an import:
+
+```compile_fail,E0080
+use fluxdi::{Shared, static_module};
+static_module! { struct Data { external value: u32; } }
+static_module! {
+    struct App { import data: Data { async value: u32; }; }
+}
+```
+"#
+)]
+#![cfg_attr(
+    all(feature = "async-factory", feature = "thread-safe"),
+    doc = r#"
+With `thread-safe`, a factory cannot hold a non-`Send` value across suspension:
+
+```compile_fail
+use fluxdi::{Error, Shared, static_module};
+async fn local() -> Result<Shared<u32>, Error> {
+    let value = std::rc::Rc::new(1);
+    std::future::pending::<()>().await;
+    Ok(Shared::new(*value))
+}
+static_module! { struct App { async value: u32 = local(); } }
+```
+"#
+)]
+#![cfg_attr(
+    not(feature = "async-factory"),
+    doc = r#"
+Async declarations require enabling the `async-factory` feature:
+
+```compile_fail
+use fluxdi::{Error, Shared, static_module};
+async fn make() -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! { struct App { async value: u32 = make(); } }
+```
+"#
+)]

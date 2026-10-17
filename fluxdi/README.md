@@ -78,7 +78,8 @@ It supports generic named-field structs with `Shared<T>`, `Option<Shared<T>>`, a
 to attach inferred graph hints. Arbitrary factory closures still need explicit hints.
 See [derive macros](../docs/src/derive-macros.md).
 
-`static_module!` declares an explicit synchronous graph and typed factory calls:
+`static_module!` declares an explicit typed graph with selected module imports and
+sync or async factories. A synchronous graph needs only `macros`:
 
 ```rust
 use fluxdi::{Error, Shared, static_module};
@@ -113,9 +114,13 @@ Initialization can still fail at runtime; network operations, configuration, and
 external resource construction are outside those checks.
 
 Static bindings are separate from the dynamic registry: dynamic overrides and graph
-snapshots do not describe or alter them. This API currently has no module imports,
-automatic discovery, generated async factories, or lifecycle ordering. It is not a
-full CDI implementation. See [static modules](../docs/src/static-modules.md).
+snapshots do not describe or alter them. Imports preserve source provider identity
+and scope; constructors take imported instances and external values in declaration
+order and create a fresh context. Async graphs require `macros` and `async-factory`;
+async dependencies propagate to generated getters. Automatic discovery, conditional
+bindings, cyclic imports, and lifecycle ordering remain unsupported. It is not a
+full CDI implementation. See [static modules](../docs/src/static-modules.md) for
+import aliases, context reuse, async qualifiers, and retry behavior.
 
 ## Application and HTTP lifetime
 
@@ -165,6 +170,7 @@ cargo check --workspace --locked
 cargo test --workspace --locked
 cargo run -p basic --locked
 cargo run -p fluxdi --example static_module --features macros --locked
+cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
 sh docs/build.sh
 ```
 

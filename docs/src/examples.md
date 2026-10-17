@@ -3,6 +3,7 @@
 The main workspace contains the following examples:
 
 - `fluxdi/examples/static_module.rs` (compile-time graph and typed assembly; requires `macros`)
+- `fluxdi/examples/static_composition_async.rs` (selected module imports and async factories; requires `macros,async-factory`)
 
 - `examples/basic`
 - `examples/injectable-macro` (macro vs manual parity)
@@ -38,6 +39,7 @@ cargo run -p graph-tooling-example
 cargo run -p injectable-macro-example
 cargo run -p decorator-example
 cargo run -p fluxdi --example static_module --features macros
+cargo run -p fluxdi --example static_composition_async --features macros,async-factory
 cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked
 ```
 

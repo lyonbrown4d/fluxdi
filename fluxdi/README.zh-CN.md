@@ -58,7 +58,7 @@ fn main() -> Result<(), Error> {
 
 `#[derive(Injectable)]` 为运行时容器解析生成构造方法。它支持带有 `Shared<T>`、`Option<Shared<T>>` 和 `Vec<Shared<T>>` 字段的泛型具名字段结构体，以及命名依赖。注册 `YourType::provider(scope)`，即可附加推断出的依赖图提示。任意工厂闭包仍然需要显式提示。参见[派生宏](../docs/zh-CN/src/derive-macros.md)。
 
-`static_module!` 声明显式同步依赖图和类型化工厂调用：
+`static_module!` 声明显式的类型化依赖图，支持按绑定选择模块导入及同步、异步工厂。同步依赖图只需启用 `macros`：
 
 ```rust
 use fluxdi::{Error, Shared, static_module};
@@ -89,7 +89,7 @@ fn main() -> Result<(), Error> {
 
 该宏在编译期检查声明中缺失的绑定、循环、作用域和工厂类型。根绑定不能捕获已声明的上下文依赖。初始化仍然可能在运行时失败；网络操作、配置和外部资源构造不在这些检查范围内。
 
-静态绑定独立于动态注册表：动态覆盖和依赖图快照不会描述或改变这些绑定。该 API 目前不支持模块导入、自动发现、生成异步工厂或生命周期排序，不是完整的 CDI 实现。参见[静态模块](../docs/zh-CN/src/static-modules.md)。
+静态绑定独立于动态注册表：动态覆盖和依赖图快照不会描述或改变这些绑定。导入保留来源提供者的身份和作用域；构造方法按声明顺序接收导入模块实例及外部值，并创建新上下文。异步依赖图要求启用 `macros` 和 `async-factory`，异步依赖会使生成的 getter 变为异步。尚不支持自动发现、条件绑定、循环导入或生命周期排序，不是完整的 CDI 实现。导入别名、上下文复用、异步标记及重试行为参见[静态模块](../docs/zh-CN/src/static-modules.md)。
 
 ## 应用与 HTTP 生命周期
 
@@ -128,6 +128,7 @@ cargo check --workspace --locked
 cargo test --workspace --locked
 cargo run -p basic --locked
 cargo run -p fluxdi --example static_module --features macros --locked
+cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
 sh docs/build.sh
 ```
 

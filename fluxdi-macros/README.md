@@ -44,8 +44,8 @@ Sets require at least one registered member and cannot be named. See the
 
 ## Explicit static assembly
 
-`static_module!` declares a synchronous graph with external inputs and typed factory
-calls. Expansion checks missing binding identifiers, cycles, scope capture, and
+`static_module!` declares a typed graph with external inputs, selected module imports,
+and synchronous or asynchronous factory calls. Expansion checks missing binding identifiers, cycles, scope capture, and
 method conflicts; Rust checks factory argument and return types. Root bindings
 cannot capture declared contextual dependencies, even through transient bindings.
 
@@ -54,9 +54,12 @@ Compilation does not prove that network operations, configuration, or external
 resources will initialize successfully. Static bindings stay outside the dynamic
 registry; dynamic overrides and graph snapshots do not alter or describe them.
 
-The current API has no module imports, automatic discovery, generated async
-factories, or lifecycle ordering. See [static modules](../docs/src/static-modules.md)
-for syntax and a runnable example, or the [core README](../fluxdi/README.md) for
+Imports select explicit keys and optional aliases, preserving source provider scope
+and safety metadata through reexports. Async graphs also require `async-factory`;
+async dependencies propagate to getters, and import qualifiers must match source
+metadata. Automatic discovery, conditional bindings, cyclic imports, and lifecycle
+ordering remain unsupported. See [static modules](../docs/src/static-modules.md)
+for syntax, context reuse, and runnable examples, or the [core README](../fluxdi/README.md) for
 both registration paths and all feature flags.
 
 ## Repository commands
@@ -66,6 +69,7 @@ Run from the repository root:
 ```bash
 cargo run -p injectable-macro-example --locked
 cargo run -p fluxdi --example static_module --features macros --locked
+cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
 cargo test --workspace --locked
 sh docs/build.sh
 ```

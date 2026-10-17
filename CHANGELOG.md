@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Static module imports with explicit export selection and aliases, preserving provider identity, scope safety and async metadata across reexports
+- Static async factories and transitive async getters with `macros,async-factory`, lazy initialization, and existing fallible retry/cancellation behavior
+- Runnable `static_composition_async` example for imports and async composition
+
 - Matching English and Simplified Chinese books, READMEs and chapter-preserving language navigation; CI builds both books and checks chapter counterparts
 
 - `static_module!` for explicit synchronous graphs, external inputs, typed provider wiring, compile-time missing/duplicate/cycle checks and rejection of root bindings that capture contextual bindings

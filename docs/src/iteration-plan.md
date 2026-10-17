@@ -61,7 +61,7 @@ the new APIs, so older core versions cannot select incompatible macro-generated 
 
 ## Batch 4: static assembly, HTTP scopes and maintenance
 
-Implementation and local functional validation are complete. The main dependency
+Completed and pushed as `842e331`. Local functional validation passed. The main dependency
 advisory check retains one upstream finding, as detailed below.
 
 - Added explicit synchronous `static_module!` graphs, typed factory wiring and external inputs.
@@ -86,7 +86,7 @@ implementation reuses syn/quote, native framework middleware and Tower test util
 Rust stable remains 1.99.1. The two obsolete async-trait lint allowances were removed
 after adopting async-trait 0.1.92.
 
-The static API currently covers one synchronous graph. Module imports, conditions,
+At the end of this batch, the static API covered one synchronous graph. Module imports, conditions,
 automatic discovery, implicit optional/set selection, static async factories and
 lifecycle ordering remain future work. Container freezing needs a registration and
 override boundary; lifecycle validation needs module ownership and startup metadata.
@@ -95,3 +95,31 @@ Memory and performance work requires measurements across context/scope hierarchi
 Request scopes cover the downstream processing future. Streaming responses and
 background tasks must retain the handles they need. See [Static Modules](./static-modules.md)
 and [Web Integrations](./web-integrations.md).
+
+## Batch 5: module imports and static async factories
+
+Implementation and local functional validation are complete.
+
+- Added explicit module imports with selected exports, local aliases and nested reexports.
+- Reused typed provider identities; constructor inputs follow combined import/external declaration order.
+- Preserved scope safety across module boundaries through compile-time metadata checks, including transient bridges.
+- Added static async factories and transitive async getters for synchronous factories with async dependencies.
+- Reused initialization, cancellation, retry and concurrency behavior in local and thread-safe modes.
+- Kept new constructors synchronous and lazy; importing creates a fresh context, with explicit `in_context` for source-tree reuse.
+- Updated English and Chinese documentation and added the `static_composition_async` example.
+
+Validation: 300 workspace tests and all 12 feature combinations passed. Strict
+workspace/all-target Clippy, standalone SeaORM Clippy, Rust API documentation,
+both mdBook languages, paired code examples, local Markdown links and formatting
+passed. The async composition and standalone SeaORM examples ran successfully.
+A separate library/application fixture verified cross-crate imports without
+requiring matching feature names in the downstream crates; seven negative fixtures
+confirmed the intended import, async, scope and feature diagnostics. The dependency
+graph is unchanged; the upstream h2 finding recorded in Batch 4 remains tracked in
+[Dependency Audit](./dependency-audit.md).
+
+The core remains framework-independent and has no new runtime dependencies. Async
+graphs require `macros,async-factory`; sync-only modules still work without the
+async feature. Imports require explicit source async declarations, checked against
+generated metadata. Conditions, discovery, implicit optional/set selection and
+lifecycle ordering remain future work; cyclic module composition is unsupported.

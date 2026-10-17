@@ -62,3 +62,7 @@ harness = false
 [[example]]
 name = "static_module"
 required-features = ["macros"]
+
+[[example]]
+name = "static_composition_async"
+required-features = ["macros", "async-factory"]

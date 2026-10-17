@@ -34,11 +34,11 @@ struct AppService<T: ?Sized> {
 
 ## 显式静态组装
 
-`static_module!` 声明带有外部输入和类型化工厂调用的同步依赖图。宏展开检查缺失绑定标识符、循环、作用域捕获和方法冲突；Rust 检查工厂参数与返回类型。根绑定不能捕获已声明的上下文依赖，即使通过瞬态绑定间接捕获也不允许。
+`static_module!` 声明类型化依赖图，支持外部输入、按绑定选择模块导入，以及同步或异步工厂调用。宏展开检查缺失绑定标识符、循环、作用域捕获和方法冲突；Rust 检查工厂参数与返回类型。根绑定不能捕获已声明的上下文依赖，即使通过瞬态绑定间接捕获也不允许。
 
 提供者按需初始化，使用运行时缓存并允许初始化失败。编译成功不代表网络操作、配置或外部资源一定初始化成功。静态绑定位于动态注册表之外；动态覆盖和依赖图快照不会改变或描述这些绑定。
 
-当前 API 不支持模块导入、自动发现、生成异步工厂或生命周期排序。语法与可运行示例参见[静态模块](../docs/zh-CN/src/static-modules.md)；两种注册方式与全部 feature 参见[核心 README](../fluxdi/README.zh-CN.md)。
+导入显式选择绑定标识符，可指定别名，并在重导出时保留来源提供者的作用域和安全元数据。异步依赖图还要求启用 `async-factory`；异步依赖会使 getter 变为异步，导入标记必须匹配来源元数据。尚不支持自动发现、条件绑定、循环导入或生命周期排序。语法、上下文复用与可运行示例参见[静态模块](../docs/zh-CN/src/static-modules.md)；两种注册方式与全部 feature 参见[核心 README](../fluxdi/README.zh-CN.md)。
 
 ## 仓库命令
 
@@ -47,6 +47,7 @@ struct AppService<T: ?Sized> {
 ```bash
 cargo run -p injectable-macro-example --locked
 cargo run -p fluxdi --example static_module --features macros --locked
+cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
 cargo test --workspace --locked
 sh docs/build.sh
 ```

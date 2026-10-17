@@ -30,3 +30,21 @@ pub use observability::*;
 pub use provider::*;
 pub use runtime::*;
 pub use scope::*;
+
+// The feature belongs to FluxDI, not the crate invoking the procedural macro.
+// Dispatch here so downstream applications need no identically named feature.
+#[doc(hidden)]
+#[cfg(all(feature = "macros", feature = "async-factory"))]
+#[macro_export]
+macro_rules! __static_module_async {
+    ($($tokens:tt)*) => { $($tokens)* };
+}
+
+#[doc(hidden)]
+#[cfg(all(feature = "macros", not(feature = "async-factory")))]
+#[macro_export]
+macro_rules! __static_module_async {
+    ($($tokens:tt)*) => {
+        compile_error!("async static modules require FluxDI's `async-factory` feature");
+    };
+}

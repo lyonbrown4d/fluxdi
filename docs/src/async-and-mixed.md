@@ -18,3 +18,7 @@ See:
 
 - `examples/module-async`
 - `examples/module-mixed-sync-async`
+
+For generated static wiring, enable `macros` as well. Declare async factories with
+`async key: Type = factory(dependencies);`; dependent getters become async automatically.
+See [Static Modules](./static-modules.md) for imports and async qualifier checks.

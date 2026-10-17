@@ -1,16 +1,38 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::{Module, Scope, key};
 
 pub(super) struct Graph {
     pub(super) order: Vec<usize>,
     pub(super) dependencies: Vec<Vec<usize>>,
+    pub(super) is_async: Vec<bool>,
 }
 
 impl Module {
     pub(super) fn validate(&self) -> syn::Result<Graph> {
         let mut names = HashMap::new();
         let mut errors: Option<syn::Error> = None;
+        let export_names = self
+            .bindings
+            .iter()
+            .flat_map(|binding| {
+                ["provider", "root_safe", "is_async"]
+                    .map(|kind| format!("__fluxdi_{kind}_{}", key(&binding.name)))
+            })
+            .collect::<HashSet<_>>();
+        let mut aliases = HashSet::new();
+        for import in &self.imports {
+            let name = key(&import.name);
+            if !aliases.insert(name.clone()) {
+                combine(
+                    &mut errors,
+                    syn::Error::new_spanned(
+                        &import.name,
+                        format!("duplicate static import alias `{name}`"),
+                    ),
+                );
+            }
+        }
         for (index, binding) in self.bindings.iter().enumerate() {
             let name = key(&binding.name);
             if matches!(
@@ -22,7 +44,8 @@ impl Module {
                     | "in_context"
                     | "clone"
                     | "default"
-            ) {
+            ) || export_names.contains(&name)
+            {
                 combine(
                     &mut errors,
                     syn::Error::new_spanned(
@@ -68,14 +91,24 @@ impl Module {
         let mut graph = Graph {
             order: Vec::with_capacity(self.bindings.len()),
             dependencies,
+            is_async: self
+                .bindings
+                .iter()
+                .map(|binding| binding.declared_async)
+                .collect(),
         };
         let mut states = vec![0; self.bindings.len()];
         let mut chain = Vec::new();
         for index in 0..self.bindings.len() {
             self.visit(index, &mut graph, &mut states, &mut chain)?;
         }
+        for &index in &graph.order {
+            graph.is_async[index] |= graph.dependencies[index]
+                .iter()
+                .any(|target| graph.is_async[*target]);
+        }
         for (index, binding) in self.bindings.iter().enumerate() {
-            if binding.scope == Scope::Root {
+            if binding.scope == Scope::Root && binding.imported.is_none() {
                 let mut seen = vec![false; self.bindings.len()];
                 self.check_root_capture(index, &graph, &mut seen, &mut vec![index])?;
             }
@@ -96,10 +129,12 @@ impl Module {
         seen[index] = true;
         for (offset, dependency) in graph.dependencies[index].iter().copied().enumerate() {
             chain.push(dependency);
-            if matches!(
-                self.bindings[dependency].scope,
-                Scope::Singleton | Scope::Scoped
-            ) {
+            if self.bindings[dependency].imported.is_none()
+                && matches!(
+                    self.bindings[dependency].scope,
+                    Scope::Singleton | Scope::Scoped
+                )
+            {
                 let path = chain
                     .iter()
                     .map(|item| key(&self.bindings[*item].name))

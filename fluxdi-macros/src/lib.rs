@@ -7,10 +7,12 @@ mod dependency;
 mod static_module;
 use dependency::Dependency;
 
-/// Defines an explicit synchronous dependency graph checked at compile time.
+/// Defines a typed dependency graph with selected module imports.
 ///
-/// Bindings name their factory dependencies directly. Factories return
-/// `Result<Shared<T>, Error>`; external bindings are supplied to `new`.
+/// Bindings name their factory dependencies directly. Synchronous factories return
+/// `Result<Shared<T>, Error>`; async factories return a future with that output.
+/// Imported modules and external values are supplied to `new` in declaration order.
+/// Async graphs require FluxDI's `async-factory` feature.
 #[proc_macro]
 pub fn static_module(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as static_module::Module);

@@ -3,6 +3,7 @@
 主工作区包含以下示例：
 
 - `fluxdi/examples/static_module.rs`（编译期依赖图与类型化组装；要求 `macros`）
+- `fluxdi/examples/static_composition_async.rs`（按绑定选择模块导入与异步工厂；要求 `macros,async-factory`）
 
 - `examples/basic`
 - `examples/injectable-macro`（宏与手动实现的等价性）
@@ -36,6 +37,7 @@ cargo run -p graph-tooling-example
 cargo run -p injectable-macro-example
 cargo run -p decorator-example
 cargo run -p fluxdi --example static_module --features macros
+cargo run -p fluxdi --example static_composition_async --features macros,async-factory
 cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked
 ```
 

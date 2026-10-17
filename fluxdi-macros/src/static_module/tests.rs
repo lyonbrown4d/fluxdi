@@ -43,6 +43,22 @@ fn graph_errors_identify_binding_names_and_dependency_chains() {
             "struct App { recursive: Value = make(recursive); }",
             "static dependency cycle: recursive -> recursive",
         ),
+        (
+            "struct App { import data: Data { value: Value; }; external value: Value; }",
+            "duplicate static binding `value`",
+        ),
+        (
+            "struct App { import data: Data {}; import r#data: Other {}; }",
+            "duplicate static import alias `data`",
+        ),
+        (
+            "struct App { external value: Value; external __fluxdi_provider_value: Value; }",
+            "conflicts with a generated module method",
+        ),
+        (
+            "struct App { import data: Data { r#type: Value; }; external __fluxdi_is_async_type: Value; }",
+            "conflicts with a generated module method",
+        ),
     ] {
         let error = expand(source).unwrap_err().to_string();
         assert!(error.contains(expected), "{source}: got {error}");
@@ -122,6 +138,23 @@ fn scope_and_syntax_errors_reject_unsupported_declarations() {
             "struct App { value: Value = async_make().await; }",
             "expected `;`",
         ),
+        (
+            "struct App { import data: Data<Value> {}; }",
+            "imports do not support generics",
+        ),
+        ("struct App { import data: Data {} }", "expected `;`"),
+        (
+            "struct App { import data: Data { #[scope(root)] value: Value; }; }",
+            "imported bindings only support doc attributes",
+        ),
+        (
+            "struct App { external async value: Value; }",
+            "external bindings cannot be async",
+        ),
+        (
+            "struct App { async external value: Value; }",
+            "external bindings cannot be async",
+        ),
     ] {
         let error = expand(source).unwrap_err().to_string();
         assert!(
@@ -137,6 +170,7 @@ fn valid_empty_and_annotated_modules_expand_as_rust_items() {
         "pub struct Empty {}",
         "/// Application docs\npub(crate) struct App { /// Binding docs\n #[scope(root)] root: dyn Service = factories::root(); #[scope(singleton)] single: Alias = factories::single(root); #[scope(scoped)] local: Value = factories::local(single); #[scope(transient)] transient: Value = factories::generic::<Value>(local); }",
         "struct App { external __fluxdi_context_0: Value; __fluxdi_provider_0: Value = make(__fluxdi_context_0); }",
+        "struct App { import: Value = make(); }",
     ] {
         syn::parse2::<syn::File>(expand(source).unwrap()).unwrap();
     }
@@ -154,4 +188,64 @@ fn generic_factory_paths_keep_explicit_rust_type_arguments() {
     assert!(arguments.colon2_token.is_some());
     assert_eq!(arguments.args.len(), 1);
     syn::parse2::<syn::File>(module.expand().unwrap()).unwrap();
+}
+
+#[test]
+fn imports_preserve_selected_keys_and_constructor_input_order() {
+    let module = syn::parse_str::<Module>(
+        "struct App {
+            external before: Value;
+            import data: crate::modules::Data {
+                local: Value = source;
+                async r#type: Other;
+            };
+            external after: Value;
+        }",
+    )
+    .unwrap();
+    assert!(matches!(
+        module.inputs.as_slice(),
+        [Input::External(0), Input::Import(0), Input::External(3)]
+    ));
+    assert_eq!(
+        key(&module.bindings[1].imported.as_ref().unwrap().source),
+        "source"
+    );
+    assert_eq!(
+        key(&module.bindings[2].imported.as_ref().unwrap().source),
+        "type"
+    );
+    assert_eq!(module.imports[0].path.segments.len(), 3);
+    syn::parse2::<syn::File>(module.generate(&module.validate().unwrap())).unwrap();
+}
+
+#[test]
+fn async_propagation_follows_forward_local_and_imported_dependencies() {
+    let module = syn::parse_str::<Module>(
+        "struct App {
+            consumer: Consumer = consume(bridge, value);
+            #[scope(transient)] bridge: Bridge = bridge(imported);
+            async value: Value = open(sync_value);
+            external sync_value: Value;
+            import data: crate::Data { async imported: Value = source; sync_import: Value; };
+            sync_consumer: Consumer = consume(sync_import, sync_value);
+        }",
+    )
+    .unwrap();
+    let graph = module.validate().unwrap();
+    assert_eq!(
+        graph.is_async,
+        vec![true, true, true, false, true, false, false]
+    );
+    assert!(module.bindings[2].declared_async);
+    assert!(!module.bindings[0].declared_async);
+    syn::parse2::<syn::File>(module.generate(&graph)).unwrap();
+    let file = syn::parse2::<syn::File>(module.expand().unwrap()).unwrap();
+    let syn::Item::Macro(item) = &file.items[0] else {
+        panic!("async graph must use feature gate glue");
+    };
+    assert!(
+        item.mac.path.is_ident("__static_module_async")
+            || item.mac.path.segments.last().unwrap().ident == "__static_module_async"
+    );
 }

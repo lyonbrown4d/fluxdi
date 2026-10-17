@@ -18,3 +18,5 @@ fluxdi = { path = "../fluxdi", features = ["async-factory"] }
 
 - `examples/module-async`
 - `examples/module-mixed-sync-async`
+
+使用生成的静态组装代码时，还需启用 `macros`。以 `async key: Type = factory(dependencies);` 声明异步工厂，依赖该绑定的 getter 会自动变为异步。导入和异步标记检查参见[静态模块](./static-modules.md)。
