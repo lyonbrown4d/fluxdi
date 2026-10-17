@@ -29,7 +29,7 @@ impl Module for SeaOrmSqliteModule {
         Box::pin(async move {
             let db = injector.try_resolve_async::<DatabaseConnection>().await?;
 
-            db.execute(Statement::from_string(
+            db.execute_raw(Statement::from_string(
                 DbBackend::Sqlite,
                 "SELECT 1".to_string(),
             ))

@@ -9,8 +9,8 @@ license-file.workspace = true
 authors.workspace = true
 
 [dependencies]
-axum = "0.8"
-rand = "0.8"
+axum.workspace = true
+rand.workspace = true
 fluxdi = { path = "../../fluxdi", features = ["thread-safe", "logging"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"] }
 

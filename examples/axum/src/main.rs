@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::Path,
     http::StatusCode,
     routing::{delete, get, post, put},
 };
@@ -11,7 +11,7 @@ use complex::core::application::use_case::{
 use complex::core::domain::todo::Todo;
 use complex::core::domain::user::User;
 use complex::infra::{di::RootModule, persistence::sqlite::SqliteClient};
-use fluxdi::axum::{InjectorState, Resolved};
+use fluxdi::axum::{InjectorState, Resolved, request_scope};
 use fluxdi::{
     Application, Error, Injector, Module, Provider, Shared, module::ModuleLifecycleFuture,
 };
@@ -181,12 +181,9 @@ async fn health_check() -> &'static str {
 }
 
 async fn scoped_debug(
-    State(state): State<InjectorState>,
+    Resolved(context_a): Resolved<RequestContext>,
+    Resolved(context_b): Resolved<RequestContext>,
 ) -> Json<ApiResponse<ScopedDebugResponse>> {
-    let scoped = state.injector().create_scope();
-    let context_a = scoped.resolve::<RequestContext>();
-    let context_b = scoped.resolve::<RequestContext>();
-
     Json(ApiResponse::ok(ScopedDebugResponse {
         request_scope_id: context_a.request_scope_id,
         same_instance_within_scope: Shared::ptr_eq(&context_a, &context_b),
@@ -205,6 +202,10 @@ fn build_router(state: InjectorState) -> Router {
         .route("/todos", get(get_all_todos))
         .route("/todos/{id}/status", put(update_todo_status))
         .route("/todos/{id}", delete(delete_todo))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            request_scope,
+        ))
         .with_state(state)
 }
 

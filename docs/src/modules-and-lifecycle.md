@@ -15,11 +15,12 @@ Sync-only bootstrapping is still available through `bootstrap_sync()`.
 
 ## Lifecycle Options (timeout)
 
-Enable the `lifecycle` feature for production-style bootstrap and shutdown options:
+Enable the `lifecycle` feature for bootstrap and shutdown timeouts. Parallel startup
+options are also available without this feature:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.2", features = ["lifecycle"] }
+fluxdi = { path = "../fluxdi", features = ["lifecycle"] }
 ```
 
 ```rust

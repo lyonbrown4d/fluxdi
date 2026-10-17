@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use actix_web::{App, HttpResponse, HttpServer, web};
 use fluxdi::{
     Injector, Provider, Shared,
-    actix::{InjectorState, Resolved, injector_data},
+    actix::{Resolved, injector_data, request_scope},
 };
 
 #[derive(Debug)]
@@ -23,13 +23,10 @@ async fn hello(Resolved(service): Resolved<GreetingService>) -> HttpResponse {
 }
 
 async fn hello_scoped(
-    state: web::Data<InjectorState>,
     Resolved(service): Resolved<GreetingService>,
+    Resolved(context_a): Resolved<RequestContext>,
+    Resolved(context_b): Resolved<RequestContext>,
 ) -> HttpResponse {
-    let scoped = state.injector().create_scope();
-    let context_a = scoped.resolve::<RequestContext>();
-    let context_b = scoped.resolve::<RequestContext>();
-
     HttpResponse::Ok().body(format!(
         "{} | request_scope_id={} | same_instance_within_scope={}",
         service.message,
@@ -57,6 +54,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(injector_data(injector.clone()))
+            .wrap(actix_web::middleware::from_fn(request_scope))
             .route("/hello", web::get().to(hello))
             .route("/hello/scoped", web::get().to(hello_scoped))
     })

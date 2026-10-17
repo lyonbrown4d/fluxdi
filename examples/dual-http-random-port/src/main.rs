@@ -4,7 +4,7 @@ use axum::{Router, routing::get};
 use fluxdi::{
     Application, Error, Injector, Module, Provider, Shared, module::ModuleLifecycleFuture,
 };
-use rand::Rng;
+use rand::RngExt;
 use tokio::{net::TcpListener, task::JoinHandle};
 
 const MIN_PORT: u16 = 30000;
@@ -88,7 +88,7 @@ impl Module for DualHttpModule {
 
 async fn bind_random_listener() -> io::Result<(TcpListener, u16)> {
     for _ in 0..BIND_ATTEMPTS {
-        let port = rand::thread_rng().gen_range(MIN_PORT..=MAX_PORT);
+        let port = rand::rng().random_range(MIN_PORT..=MAX_PORT);
         match TcpListener::bind(("127.0.0.1", port)).await {
             Ok(listener) => return Ok((listener, port)),
             Err(err) if err.kind() == io::ErrorKind::AddrInUse => continue,

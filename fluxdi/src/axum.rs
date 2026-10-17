@@ -1,13 +1,14 @@
 //! Axum integration for FluxDI.
 //!
-//! This module provides a state wrapper and an extractor that resolves
-//! dependencies directly from an `Injector`.
+//! State, optional request-scope middleware, and dependency extraction from an
+//! `Injector`.
 
 use std::ops::Deref;
 
 use ::axum::{
-    extract::{FromRef, FromRequestParts},
+    extract::{FromRef, FromRequestParts, Request, State},
     http::{StatusCode, request::Parts},
+    middleware::Next,
     response::{IntoResponse, Response},
 };
 
@@ -31,6 +32,47 @@ impl InjectorState {
     pub fn injector(&self) -> Shared<Injector> {
         self.injector.clone()
     }
+}
+
+/// Injector context shared by all dependency resolutions in one HTTP request.
+///
+/// Installed by [`request_scope`], and accessible through `Extension<RequestScope>`.
+/// Cloning this handle keeps its scope alive beyond request processing.
+#[derive(Clone)]
+pub struct RequestScope {
+    injector: Shared<Injector>,
+}
+
+impl RequestScope {
+    /// Returns a cloned handle for request-local resolutions and registrations.
+    pub fn injector(&self) -> Shared<Injector> {
+        self.injector.clone()
+    }
+}
+
+/// Establishes one dependency scope for the downstream request pipeline.
+///
+/// Install with `axum::middleware::from_fn_with_state(state, request_scope)`.
+/// Nested installations reuse the existing request scope. The middleware retains
+/// the scope until the downstream response is produced, or processing is cancelled.
+/// A streaming response must capture a scope or service handle itself if it needs
+/// that dependency to remain alive while its body is consumed.
+pub async fn request_scope(
+    State(state): State<InjectorState>,
+    mut request: Request,
+    next: Next,
+) -> Response {
+    let scope = request
+        .extensions()
+        .get::<RequestScope>()
+        .cloned()
+        .unwrap_or_else(|| RequestScope {
+            injector: Shared::new(state.injector.create_scope()),
+        });
+    request.extensions_mut().insert(scope.clone());
+    let response = next.run(request).await;
+    drop(scope);
+    response
 }
 
 /// Rejection type used by [`Resolved`].
@@ -61,7 +103,7 @@ impl IntoResponse for ResolveRejection {
     }
 }
 
-/// Axum extractor that resolves `T` from `InjectorState`.
+/// Resolves `T` from the request scope, or from `InjectorState` without middleware.
 pub struct Resolved<T: ?Sized + Send + Sync + 'static>(pub Shared<T>);
 
 impl<T: ?Sized + Send + Sync + 'static> Resolved<T> {
@@ -92,14 +134,18 @@ where
 {
     type Rejection = ResolveRejection;
 
-    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let injector_state = InjectorState::from_ref(state);
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let injector = parts
+            .extensions
+            .get::<RequestScope>()
+            .map(RequestScope::injector)
+            .unwrap_or_else(|| InjectorState::from_ref(state).injector());
         #[cfg(feature = "async-factory")]
         {
-            match injector_state.injector.try_resolve::<T>() {
+            match injector.try_resolve::<T>() {
                 Ok(resolved) => Ok(Self(resolved)),
                 Err(error) if error.kind == ErrorKind::AsyncFactoryRequiresAsyncResolve => {
-                    let resolved = injector_state.injector.try_resolve_async::<T>().await?;
+                    let resolved = injector.try_resolve_async::<T>().await?;
                     Ok(Self(resolved))
                 }
                 Err(error) => Err(error.into()),
@@ -108,7 +154,7 @@ where
 
         #[cfg(not(feature = "async-factory"))]
         {
-            let resolved = injector_state.injector.try_resolve::<T>()?;
+            let resolved = injector.try_resolve::<T>()?;
             Ok(Self(resolved))
         }
     }

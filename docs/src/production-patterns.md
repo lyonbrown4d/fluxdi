@@ -9,7 +9,7 @@ Enable the `lifecycle` feature for timeout support:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.2", features = ["lifecycle"] }
+fluxdi = { path = "../fluxdi", features = ["lifecycle"] }
 ```
 
 ## Parallel Module Startup

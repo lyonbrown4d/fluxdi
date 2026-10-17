@@ -1,5 +1,7 @@
 # Changelog
 
+[English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
+
 All notable changes to FluxDI are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -8,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+- Matching English and Simplified Chinese books, READMEs and chapter-preserving language navigation; CI builds both books and checks chapter counterparts
+
+- `static_module!` for explicit synchronous graphs, external inputs, typed provider wiring, compile-time missing/duplicate/cycle checks and rejection of root bindings that capture contextual bindings
+- Typed `Injector::try_resolve_provider` and async counterpart, reusing existing context caches and initialization without registry lookup
+- Opt-in Axum and Actix `request_scope` middleware and `RequestScope` handles; extractors share the request context and Actix supports async factories
+- Static assembly example and compile-fail documentation tests, HTTP pipeline isolation and cancellation regressions
 
 - `Injectable` support for type/lifetime/const generics and existing `where` clauses, named fields via `#[inject(name = "...")]`, optional dependencies, and set dependencies
 - Generated `provider(scope)` and `with_injected_dependencies(provider)` methods to attach inferred graph hints; original constructors remain supported
@@ -24,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Graceful shutdown timeout: with `ShutdownOptions::with_timeout`, all modules' `on_stop` are attempted within the time budget; no partial abort
 
 ### Changed
+
+- All direct registry dependencies use the latest stable snapshot in workspace dependency declarations, with Syn 3, Criterion 0.8, Rand 0.10 and the OpenTelemetry 0.33 / tracing-opentelemetry 0.34 API updates
+- SeaORM 2's SQLite example has an independent workspace and lockfile to coexist with latest rusqlite; CI checks and audits both native dependency graphs
+- Repaired the root README, previously stored as an invalid symbolic link
+
+- Refreshed compatible locked dependencies for RustSec findings in Crossbeam, Rand, Rustls and WebPKI, removed the unmaintained `proc-macro-error2` chain through SeaORM/sea-bae updates, and refreshed the yanked Spin version
+- Updated locked Actix dependencies; its remaining `h2 0.3` advisory is tracked in `docs/src/dependency-audit.md` and remains visible to cargo-deny
 
 - Downstream exhaustive matches on `DependencyCardinality` must handle `Optional`; derived types must reserve the generated `provider` and `with_injected_dependencies` method names
 - The extended macro requires the updated core APIs. Before publishing, coordinate a major release of both crates so older core releases with a `^1.x` macro dependency cannot select incompatible generated code

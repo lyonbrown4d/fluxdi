@@ -1,20 +1,27 @@
 //! Actix-web integration for FluxDI.
 //!
-//! This module provides a state wrapper, service config extension, and an
-//! extractor that resolves dependencies directly from an `Injector`.
+//! State, service configuration, optional request-scope middleware, and
+//! dependency extraction from an `Injector`.
 
-use std::{
-    future::{Ready, ready},
-    ops::Deref,
-};
+use std::ops::Deref;
+
+#[cfg(not(feature = "async-factory"))]
+use std::future::{Ready, ready};
+
+#[cfg(feature = "async-factory")]
+use futures::future::LocalBoxFuture;
 
 use ::actix_web::{
-    Error as ActixError, FromRequest, HttpRequest, HttpResponse, ResponseError,
-    dev::Payload,
+    Error as ActixError, FromRequest, HttpMessage, HttpRequest, HttpResponse, ResponseError,
+    body::MessageBody,
+    dev::{Payload, ServiceRequest, ServiceResponse},
     http::StatusCode,
+    middleware::Next,
     web::{self, ServiceConfig},
 };
 
+#[cfg(feature = "async-factory")]
+use crate::ErrorKind;
 use crate::{Error, Injector, runtime::Shared};
 
 /// Actix state wrapper that stores a shared injector reference.
@@ -33,6 +40,61 @@ impl InjectorState {
     pub fn injector(&self) -> Shared<Injector> {
         self.injector.clone()
     }
+}
+
+/// Injector context shared by all dependency resolutions in one HTTP request.
+///
+/// Installed by [`request_scope`], and available from `HttpMessage::extensions`.
+/// Cloning this handle keeps its scope alive beyond request processing.
+#[derive(Clone)]
+pub struct RequestScope {
+    injector: Shared<Injector>,
+}
+
+impl RequestScope {
+    /// Returns a cloned handle for request-local resolutions and registrations.
+    pub fn injector(&self) -> Shared<Injector> {
+        self.injector.clone()
+    }
+}
+
+/// Establishes one dependency scope for the downstream request pipeline.
+///
+/// Install with `actix_web::middleware::from_fn(request_scope)` and configure
+/// [`injector_data`]. Nested installations reuse the existing request scope.
+/// The scope extension is removed from the produced response's request. Errors
+/// and cancellation release it when the request is dropped. Explicit request,
+/// scope, or service clones may extend its lifetime. Streaming bodies must
+/// capture a scope or service handle if they require it while being consumed.
+pub async fn request_scope<B: MessageBody>(
+    request: ServiceRequest,
+    next: Next<B>,
+) -> Result<ServiceResponse<B>, ActixError> {
+    let owns_scope = !request.extensions().contains::<RequestScope>();
+    let scope = if owns_scope {
+        let state = request
+            .app_data::<web::Data<InjectorState>>()
+            .ok_or_else(missing_state)?;
+        let scope = RequestScope {
+            injector: Shared::new(state.injector.create_scope()),
+        };
+        request.extensions_mut().insert(scope.clone());
+        Some(scope)
+    } else {
+        None
+    };
+    // Do not clone HttpRequest before calling the router: Actix requires its
+    // request allocation to remain unique while mutating routing information.
+    let result = next.call(request).await;
+    if owns_scope && let Ok(response) = &result {
+        response.request().extensions_mut().remove::<RequestScope>();
+    }
+    drop(scope);
+    result
+}
+
+fn missing_state() -> ResolveRejection {
+    ResolveRejection::internal("InjectorState is not configured in app_data".to_string())
 }
 
 /// Builds typed app data for `actix_web::App::app_data(...)`.
@@ -89,7 +151,7 @@ impl ResponseError for ResolveRejection {
     }
 }
 
-/// Actix extractor that resolves `T` from [`InjectorState`].
+/// Resolves `T` from the request scope, or from [`InjectorState`] without middleware.
 pub struct Resolved<T: ?Sized + Send + Sync + 'static>(pub Shared<T>);
 
 impl<T: ?Sized + Send + Sync + 'static> Resolved<T> {
@@ -117,26 +179,53 @@ where
     T: ?Sized + Send + Sync + 'static,
 {
     type Error = ActixError;
+    #[cfg(feature = "async-factory")]
+    type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
+    #[cfg(not(feature = "async-factory"))]
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
-        let result = req
-            .app_data::<web::Data<InjectorState>>()
-            .cloned()
-            .ok_or_else(|| {
-                ResolveRejection::internal(
-                    "InjectorState is not configured in app_data".to_string(),
-                )
+        // Clone before returning the future: never hold an extensions RefCell
+        // borrow across asynchronous resolution or concurrent extractors.
+        let injector = req
+            .extensions()
+            .get::<RequestScope>()
+            .map(RequestScope::injector)
+            .or_else(|| {
+                req.app_data::<web::Data<InjectorState>>()
+                    .map(|state| state.injector())
             })
-            .and_then(|state| {
-                state
-                    .injector()
-                    .try_resolve::<T>()
-                    .map_err(ResolveRejection::from)
-            })
-            .map(Self)
-            .map_err(ActixError::from);
+            .ok_or_else(missing_state);
 
-        ready(result)
+        #[cfg(feature = "async-factory")]
+        {
+            Box::pin(async move {
+                let injector = injector?;
+                let resolved = match injector.try_resolve::<T>() {
+                    Ok(resolved) => resolved,
+                    Err(error) if error.kind == ErrorKind::AsyncFactoryRequiresAsyncResolve => {
+                        injector
+                            .try_resolve_async::<T>()
+                            .await
+                            .map_err(ResolveRejection::from)?
+                    }
+                    Err(error) => return Err(ResolveRejection::from(error).into()),
+                };
+                Ok(Self(resolved))
+            })
+        }
+        #[cfg(not(feature = "async-factory"))]
+        {
+            ready(
+                injector
+                    .and_then(|injector| {
+                        injector
+                            .try_resolve::<T>()
+                            .map(Self)
+                            .map_err(ResolveRejection::from)
+                    })
+                    .map_err(ActixError::from),
+            )
+        }
     }
 }

@@ -1,5 +1,6 @@
-use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use fluxdi::{Injector, Provider, Shared};
+use std::hint::black_box;
 
 #[cfg(feature = "thread-safe")]
 #[path = "injector_baseline/concurrency.rs"]

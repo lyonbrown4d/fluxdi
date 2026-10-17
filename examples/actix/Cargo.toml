@@ -9,5 +9,5 @@ license-file.workspace = true
 authors.workspace = true
 
 [dependencies]
-actix-web = "4.11.0"
+actix-web.workspace = true
 fluxdi = { path = "../../fluxdi", features = ["actix", "logging"] }

@@ -2,6 +2,34 @@ use super::*;
 use crate::runtime::Service;
 
 impl Injector {
+    /// Resolves an explicit typed provider in this calling context.
+    ///
+    /// This uses the same scope caches, fallible initialization, decorators and
+    /// resource limits as registry resolution, without looking up a binding by
+    /// type or name. Keep the shared provider handle to preserve cache identity.
+    /// The provider is not registered in this injector's dynamic registry or
+    /// dependency graph. Generated static modules use this entry point.
+    pub fn try_resolve_provider<T: ?Sized + Service>(
+        &self,
+        provider: &Shared<Provider<T>>,
+    ) -> Result<Shared<T>, Error> {
+        self.track_resolve(|| self.resolve_binding(provider.clone()))
+    }
+
+    /// Resolves an explicit provider asynchronously in this calling context.
+    ///
+    /// Like [`Self::try_resolve_provider`], this does not register the provider.
+    /// Cancellation and failed initialization release the initialization owner
+    /// so a later caller can retry.
+    #[cfg(feature = "async-factory")]
+    pub async fn try_resolve_provider_async<T: ?Sized + Service>(
+        &self,
+        provider: &Shared<Provider<T>>,
+    ) -> Result<Shared<T>, Error> {
+        self.track_resolve_async(self.resolve_binding_async(provider.clone()))
+            .await
+    }
+
     fn resolution_key<T: ?Sized + Service>(&self, provider: &Shared<Provider<T>>) -> ResolutionKey {
         let context = self
             .cache_target_for_scope(provider.scope)

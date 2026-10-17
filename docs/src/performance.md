@@ -41,6 +41,10 @@ cargo bench -p fluxdi --bench injector_baseline --features thread-safe -- \
 
 A short local run on 2026-10-17 used Rust 1.99.1, Darwin arm64, the optimized bench profile, and default + `thread-safe` features. These are the ranges printed by Criterion with 10 samples, 100 ms warm-up, and 200 ms measurement. They are a check of the new harness, not a portable performance guarantee.
 
+These measurements used Criterion 0.5.1 before the dependency refresh. The current
+workspace uses Criterion 0.8.2; rerun benchmarks before making performance comparisons
+against the upgraded dependency graph.
+
 | Measurement | Reported range |
 | --- | --- |
 | Cached root resolution | 86.440–86.841 ns |

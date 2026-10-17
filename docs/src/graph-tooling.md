@@ -39,6 +39,9 @@ Optional hints use `DependencyCardinality::Optional`. An absent optional target 
 
 Graph validation only inspects metadata; it does not initialize services or verify that factories will succeed. Dependencies inside arbitrary closures still require explicit hints. Graph snapshots are not a freeze operation and do not prevent later registration changes.
 
+For compile-time validation and generated typed wiring, use [Static Modules](./static-modules.md).
+Static bindings are separate from the dynamic registry and are not included in these snapshots.
+
 ## DOT and Mermaid Output
 
 ```rust

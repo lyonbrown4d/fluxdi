@@ -1,9 +1,5 @@
 use crate::core::domain::user::User;
 
-#[allow(
-    clippy::double_must_use,
-    reason = "async_trait adds must_use to its generated boxed Future methods"
-)]
 #[async_trait::async_trait]
 pub trait UserRepository: Send + Sync {
     async fn get_all(&self) -> Result<Vec<User>, String>;

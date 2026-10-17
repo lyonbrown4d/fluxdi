@@ -8,7 +8,7 @@ Enable:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.1", features = ["logging"] }
+fluxdi = { path = "../fluxdi", features = ["logging"] }
 ```
 
 Initialize once at app startup:
@@ -31,7 +31,7 @@ Enable:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.1", features = ["tracing"] }
+fluxdi = { path = "../fluxdi", features = ["tracing"] }
 ```
 
 ## Metrics / Prometheus
@@ -40,14 +40,14 @@ Enable metrics:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.1", features = ["metrics"] }
+fluxdi = { path = "../fluxdi", features = ["metrics"] }
 ```
 
 Prometheus export:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.1", features = ["prometheus"] }
+fluxdi = { path = "../fluxdi", features = ["prometheus"] }
 ```
 
 Then call:
@@ -61,10 +61,15 @@ Enable:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.1", features = ["opentelemetry"] }
+fluxdi = { path = "../fluxdi", features = ["opentelemetry"] }
 ```
 
 Helpers:
 
 - `fluxdi::opentelemetry_layer(...)`
 - `fluxdi::try_init_opentelemetry(...)`
+
+The current integration uses OpenTelemetry 0.33 and tracing-opentelemetry 0.34.
+Tracer types must implement `Tracer + Send + Sync + 'static`, with `T::Span: Send + Sync`.
+The previous `PreSampledTracer` bound is no longer part of the upstream API.
+The application owns tracer-provider/exporter installation and shutdown.

@@ -4,7 +4,21 @@ use quote::quote;
 use syn::{Data, DeriveInput, Fields, GenericParam, parse_macro_input, parse_quote};
 
 mod dependency;
+mod static_module;
 use dependency::Dependency;
+
+/// Defines an explicit synchronous dependency graph checked at compile time.
+///
+/// Bindings name their factory dependencies directly. Factories return
+/// `Result<Shared<T>, Error>`; external bindings are supplied to `new`.
+#[proc_macro]
+pub fn static_module(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as static_module::Module);
+    match input.expand() {
+        Ok(tokens) => tokens.into(),
+        Err(error) => error.to_compile_error().into(),
+    }
+}
 
 /// Derives synchronous constructors and a provider carrying dependency graph hints.
 ///

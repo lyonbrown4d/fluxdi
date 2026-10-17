@@ -17,6 +17,7 @@ pub(super) struct Dependency {
 
 impl Dependency {
     pub(super) fn parse(field: &Field) -> syn::Result<Self> {
+        field.modifiers.require_empty()?;
         let field_ident = field
             .ident
             .clone()
@@ -106,7 +107,10 @@ impl Dependency {
 }
 
 fn inner_type<'a>(ty: &'a Type, wrapper: &str) -> Option<&'a Type> {
-    let Type::Path(TypePath { qself: None, path }) = ty else {
+    let Type::Path(TypePath {
+        qself: None, path, ..
+    }) = ty
+    else {
         return None;
     };
     let segment = path.segments.last()?;

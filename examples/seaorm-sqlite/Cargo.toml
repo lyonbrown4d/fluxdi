@@ -1,15 +1,19 @@
 [package]
 name = "seaorm-sqlite-example"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-repository.workspace = true
-homepage.workspace = true
-license-file.workspace = true
-authors.workspace = true
+version = "1.2.2"
+edition = "2024"
+rust-version = "1.99.1"
+repository = "https://github.com/DaiYuANg/fluxdi"
+homepage = "https://github.com/DaiYuANg/fluxdi"
+license-file = "../../LICENSE"
+authors = ["João Pedro Martins <mjoaopedro61@gmail.com>"]
+
+# SQLx and rusqlite currently require incompatible libsqlite3-sys versions.
+# Keep this executable's native SQLite dependency graph independent.
+[workspace]
 
 [dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-sea-orm = { version = "1", features = ["sqlx-sqlite", "runtime-tokio-rustls"] }
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros"] }
+sea-orm = { version = "2.0.4", features = ["sqlx-sqlite", "runtime-tokio-rustls"] }
 fluxdi = { path = "../../fluxdi", features = ["thread-safe", "async-factory", "logging"] }
 

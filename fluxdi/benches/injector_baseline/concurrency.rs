@@ -1,5 +1,6 @@
-use criterion::{BenchmarkId, Criterion, Throughput, black_box};
+use criterion::{BenchmarkId, Criterion, Throughput};
 use fluxdi::{Injector, Provider, Shared};
+use std::hint::black_box;
 use std::sync::{
     Arc, Barrier,
     atomic::{AtomicBool, AtomicU64, Ordering},

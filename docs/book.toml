@@ -10,3 +10,5 @@ default-theme = "light"
 preferred-dark-theme = "navy"
 git-repository-url = "https://github.com/DaiYuANg/fluxdi"
 edit-url-template = "https://github.com/DaiYuANg/fluxdi/edit/main/docs/{path}"
+additional-js = ["theme/languages.js"]
+additional-css = ["theme/languages.css"]

@@ -2,19 +2,19 @@
 
 ## Install
 
-The unreleased workspace requires **Rust 1.99.1 or newer**. `rust-toolchain.toml` pins the development toolchain to 1.99.1; all workspace packages declare the same minimum version. The published dependency examples below refer to earlier releases.
-
-```toml
-[dependencies]
-fluxdi = "1.2.1"
-```
-
-For local workspace usage:
+This guide describes the unreleased checkout, requiring **Rust 1.99.1 or newer**.
+`rust-toolchain.toml` pins that stable version. Use the local crate until the core and
+macro changes receive a coordinated release:
 
 ```toml
 [dependencies]
 fluxdi = { path = "../fluxdi" }
 ```
+
+Direct dependency versions are maintained in root `[workspace.dependencies]`.
+The SeaORM SQLite example is an independent workspace because its native SQLite
+binding range differs from the latest rusqlite used by the complex example.
+Run it with `cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked`.
 
 ## Minimal Example
 
@@ -63,7 +63,7 @@ RUST_LOG=fluxdi=trace cargo run -p basic
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.1", features = ["macros"] }
+fluxdi = { path = "../fluxdi", features = ["macros"] }
 ```
 
 Then:

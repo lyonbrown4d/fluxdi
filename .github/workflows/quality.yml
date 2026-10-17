@@ -21,6 +21,7 @@ jobs:
           toolchain: "1.99.1"
           components: rustfmt
       - run: cargo fmt --all --check
+      - run: cargo fmt --manifest-path examples/seaorm-sqlite/Cargo.toml --all --check
 
   clippy:
     name: Clippy
@@ -45,6 +46,21 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --all-features
 
+  seaorm-example:
+    name: Standalone SeaORM example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/seaorm-sqlite
+      - run: cargo clippy --manifest-path examples/seaorm-sqlite/Cargo.toml --all-targets --all-features --locked -- -D warnings
+      - run: cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked
+
   feature-matrix:
     name: Feature combinations
     runs-on: ubuntu-latest
@@ -62,6 +78,8 @@ jobs:
           - "--features lock-free,async-factory"
           - "--features resource-limit-async"
           - "--no-default-features --features macros,lifecycle,resource-limit-async"
+          - "--no-default-features --features axum"
+          - "--no-default-features --features actix"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -89,7 +107,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cargo install mdbook --locked
-      - run: mdbook build docs
+      - run: sh docs/build.sh
 
   deny:
     name: Cargo Deny
@@ -104,4 +122,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
+          command: check ${{ matrix.checks }}
+      - name: Audit standalone SeaORM example
+        if: always()
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: examples/seaorm-sqlite/Cargo.toml
           command: check ${{ matrix.checks }}

@@ -1,0 +1,14 @@
+[book]
+authors = ["FluxDI Contributors"]
+language = "zh-CN"
+src = "src"
+title = "FluxDI 中文文档"
+description = "FluxDI 官方中文使用文档"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/DaiYuANg/fluxdi"
+edit-url-template = "https://github.com/DaiYuANg/fluxdi/edit/main/docs/zh-CN/{path}"
+additional-js = ["../theme/languages.js"]
+additional-css = ["../theme/languages.css"]

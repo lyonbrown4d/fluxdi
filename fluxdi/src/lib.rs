@@ -13,13 +13,15 @@ pub mod provider;
 pub mod resolve_guard;
 pub mod runtime;
 pub mod scope;
+#[cfg(feature = "macros")]
+pub mod static_modules;
 
 pub use application::*;
 #[cfg(feature = "axum")]
 pub use axum::*;
 pub use error::*;
 #[cfg(feature = "macros")]
-pub use fluxdi_macros::Injectable;
+pub use fluxdi_macros::{Injectable, static_module};
 pub use graph::*;
 pub use injector::*;
 pub use instance::*;

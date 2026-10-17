@@ -9,6 +9,6 @@ license-file.workspace = true
 authors.workspace = true
 
 [dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
 fluxdi = { path = "../../fluxdi", features = ["thread-safe", "async-factory", "logging"] }
 

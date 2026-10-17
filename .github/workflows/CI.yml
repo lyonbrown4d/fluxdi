@@ -38,6 +38,12 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: Run fmt
         run: cargo fmt --all --check
+      - name: Check standalone SeaORM example
+        run: cargo clippy --manifest-path examples/seaorm-sqlite/Cargo.toml --all-targets --all-features --locked -- -D warnings
+      - name: Check standalone example formatting
+        run: cargo fmt --manifest-path examples/seaorm-sqlite/Cargo.toml --all --check
+      - name: Run standalone SeaORM example
+        run: cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked
 
   docs:
     name: Check documentation
@@ -70,7 +76,7 @@ jobs:
       - name: Install mdBook
         run: cargo install mdbook --locked
       - name: Build docs book
-        run: mdbook build docs
+        run: sh docs/build.sh
 
   deny:
     name: Deny verify
@@ -85,6 +91,12 @@ jobs:
       - uses: actions/checkout@v5
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
+          command: check ${{ matrix.checks }}
+      - name: Audit standalone SeaORM example
+        if: always()
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: examples/seaorm-sqlite/Cargo.toml
           command: check ${{ matrix.checks }}
 
   test:
