@@ -1,7 +1,7 @@
 use super::*;
 
 fn expand(source: &str) -> syn::Result<TokenStream> {
-    syn::parse_str::<Module>(source)?.expand()
+    super::expand(source.parse().unwrap())
 }
 
 #[test]
@@ -109,10 +109,6 @@ fn scope_and_syntax_errors_reject_unsupported_declarations() {
         (
             "#[derive(Clone)] struct App {}",
             "only support doc attributes",
-        ),
-        (
-            "struct App { #[cfg(test)] value: Value = make(); }",
-            "only support scope and doc attributes",
         ),
         (
             "struct App { #[scope(other)] value: Value = make(); }",

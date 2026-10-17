@@ -11,6 +11,10 @@
 
 ### 新增
 
+- 静态模块支持原生 Rust `cfg`/`cfg_attr` 条件，在依赖图语义检查前选择启用的声明
+- 静态工厂支持 `optional(key)` 和 `all(group)` 参数，通过局部 `#[set(group)]` 显式选择集合成员，按顺序解析并保留初始化错误
+- 新增 `static_conditionals` 可运行示例，对比默认 `debug` 的启用和禁用
+
 - 静态模块支持显式选择导出绑定及设置别名，重导出时保留提供者身份、作用域安全性和异步元数据
 - 启用 `macros,async-factory` 后支持静态异步工厂和沿依赖传递的异步 getter，按需初始化并沿用可失败工厂的重试和取消行为
 - 新增 `static_composition_async` 可运行示例，展示导入和异步组装

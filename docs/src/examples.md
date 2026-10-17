@@ -4,6 +4,7 @@ The main workspace contains the following examples:
 
 - `fluxdi/examples/static_module.rs` (compile-time graph and typed assembly; requires `macros`)
 - `fluxdi/examples/static_composition_async.rs` (selected module imports and async factories; requires `macros,async-factory`)
+- `fluxdi/examples/static_conditionals.rs` (native conditions, optional config, and ordered plugin collections; requires `macros`; compare default `debug` on/off)
 
 - `examples/basic`
 - `examples/injectable-macro` (macro vs manual parity)
@@ -40,6 +41,8 @@ cargo run -p injectable-macro-example
 cargo run -p decorator-example
 cargo run -p fluxdi --example static_module --features macros
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory
+cargo run -p fluxdi --example static_conditionals --features macros
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros
 cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked
 ```
 

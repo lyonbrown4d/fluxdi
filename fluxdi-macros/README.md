@@ -57,8 +57,13 @@ registry; dynamic overrides and graph snapshots do not alter or describe them.
 Imports select explicit keys and optional aliases, preserving source provider scope
 and safety metadata through reexports. Async graphs also require `async-factory`;
 async dependencies propagate to getters, and import qualifiers must match source
-metadata. Automatic discovery, conditional bindings, cyclic imports, and lifecycle
-ordering remain unsupported. See [static modules](../docs/src/static-modules.md)
+metadata. Native `cfg`/`cfg_attr` select active declarations before graph checks;
+constructor inputs and inferred getter async signatures can vary by configuration.
+`optional(key)` yields `None` only for absent bindings and propagates factory errors.
+`all(group)` collects explicit local `#[set(group)]` contributors in declaration
+order, including an empty vector; imported contributors must be tagged at the import
+site. Active optional and collection edges retain cycle, root-capture, and async
+checks. Automatic discovery, cyclic imports, and lifecycle ordering remain unsupported. See [static modules](../docs/src/static-modules.md)
 for syntax, context reuse, and runnable examples, or the [core README](../fluxdi/README.md) for
 both registration paths and all feature flags.
 
@@ -70,6 +75,8 @@ Run from the repository root:
 cargo run -p injectable-macro-example --locked
 cargo run -p fluxdi --example static_module --features macros --locked
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
+cargo run -p fluxdi --example static_conditionals --features macros --locked
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros --locked
 cargo test --workspace --locked
 sh docs/build.sh
 ```

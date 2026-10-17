@@ -327,3 +327,123 @@ static_module! { struct App { async value: u32 = make(); } }
 ```
 "#
 )]
+// Collection and optional edges are checked just like required edges, after
+// compiler configuration has selected the active declarations.
+#![doc = r#"
+Optional dependencies and collection members participate in cycle checks:
+
+```compile_fail
+use fluxdi::{Error, Shared, static_module};
+fn make(_: Option<Shared<u32>>) -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! { struct OptionalCycle { value: u32 = make(optional(value)); } }
+```
+
+```compile_fail
+use fluxdi::{Error, Shared, static_module};
+fn make(_: Vec<Shared<u32>>) -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! {
+    struct CollectionCycle {
+        #[set(values)] value: u32 = make(all(values));
+    }
+}
+```
+
+Root bindings cannot capture contextual values through either argument form:
+
+```compile_fail
+use fluxdi::{Error, Shared, static_module};
+fn value() -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+fn make(_: Option<Shared<u32>>) -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! {
+    struct OptionalCapture {
+        #[scope(scoped)] request: u32 = value();
+        #[scope(root)] root: u32 = make(optional(request));
+    }
+}
+```
+
+An expanded collection retains diagnostic locations even after earlier arguments
+and multiple members have added graph edges:
+
+```compile_fail
+use fluxdi::{Error, Shared, static_module};
+fn value() -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+fn make(_: Shared<u32>, _: Vec<Shared<u32>>, _: Option<Shared<u32>>)
+    -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! {
+    struct CollectionCapture {
+        #[scope(root)] safe: u32 = value();
+        #[scope(root)] #[set(values)] first: u32 = value();
+        #[scope(root)] #[set(values)] second: u32 = value();
+        #[scope(scoped)] #[set(values)] request: u32 = value();
+        #[scope(root)] root: u32 = make(safe, all(values), optional(absent));
+    }
+}
+```
+
+Imported contextual capture is checked through collections too:
+
+```compile_fail,E0080
+use fluxdi::{Error, Shared, static_module};
+fn value() -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+fn make(_: Vec<Shared<u32>>) -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! { struct Data { value: u32 = value(); } }
+static_module! {
+    struct App {
+        import data: Data { #[set(values)] value: u32; };
+        #[scope(root)] root: u32 = make(all(values));
+    }
+}
+```
+
+Rust checks optional and collection element types:
+
+```compile_fail,E0308
+use fluxdi::{Error, Shared, static_module};
+fn make(_: Option<Shared<String>>) -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! {
+    struct WrongOptional {
+        external value: u32;
+        result: u32 = make(optional(value));
+    }
+}
+```
+
+```compile_fail,E0308
+use fluxdi::{Error, Shared, static_module};
+fn make(_: Vec<Shared<String>>) -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! {
+    struct WrongCollection {
+        #[set(values)] external value: u32;
+        result: u32 = make(all(values));
+    }
+}
+```
+
+Membership lists must be nonempty and must not repeat the same group:
+
+```compile_fail
+use fluxdi::static_module;
+static_module! { struct EmptyMembership { #[set()] external value: u32; } }
+```
+
+```compile_fail
+use fluxdi::static_module;
+static_module! {
+    struct DuplicateMembership {
+        #[set(values)] #[set(r#values)] external value: u32;
+    }
+}
+```
+
+Only a binding key or a single-level `optional(key)` / `all(group)` argument
+is accepted:
+
+```compile_fail
+use fluxdi::{Error, Shared, static_module};
+fn make(_: Option<Shared<u32>>) -> Result<Shared<u32>, Error> { Ok(Shared::new(1)) }
+static_module! {
+    struct NestedArgument { result: u32 = make(optional(optional(value))); }
+}
+```
+"#]

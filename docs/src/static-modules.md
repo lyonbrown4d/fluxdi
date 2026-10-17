@@ -1,7 +1,8 @@
 # Static Modules
 
 The unreleased `static_module!` macro provides explicit typed assembly, selected
-module imports, and synchronous or asynchronous factories. Enable `macros`; async
+module imports, native Rust conditions, optional and collection arguments, and
+synchronous or asynchronous factories. Enable `macros`; async
 graphs also require `async-factory`. The core remains independent of HTTP frameworks.
 
 ```toml
@@ -48,11 +49,114 @@ Binding identifiers select dependencies. Multiple bindings may have the same typ
 are supported, and Rust checks factory argument and return types. Declaration order
 does not determine construction order.
 
-Each synchronous factory is a function path taking the declared `Shared<T>` arguments
+Each synchronous factory is a function path taking the declared dependency arguments
 and returning `Result<Shared<T>, Error>`. Factories run lazily on first resolution.
 External values have root scope. Constructor inputs include import instances and
 external values, in their combined textual declaration order.
 They form an explicit boundary: the macro cannot inspect how those values were built.
+
+## Compile-time conditions
+
+Use native [`#[cfg(...)]` and `#[cfg_attr(...)]`](https://doc.rust-lang.org/reference/conditional-compilation.html) on the module, local factory bindings,
+external inputs, import blocks, or individual import entries. Rust selects the active
+declarations before the macro parses and validates their semantic graph. Disabled
+declarations contribute no types, constructor inputs, dependencies, async propagation,
+scope checks, or collection members. Inactive declarations still need balanced DSL
+syntax. Predicates follow the compiling crate's Rust configuration; the macro does
+not inspect process environment variables or evaluate runtime conditions.
+
+`cfg_attr` can add attributes supported at its location: `cfg`, documentation,
+`scope` on local factories, and `set` on factory, external, or import-entry bindings.
+It cannot add a scope to an external or imported binding. Feature selection can
+change `new(...)`'s input list and a getter's inferred sync/async signature, so callers
+must use matching conditions when these signatures differ.
+
+An exported binding's conditions are evaluated in its defining crate. Importing an
+export that the source crate disabled remains a compilation error, even through
+`optional(local_key)`; disable the consumer import with its own matching condition.
+There is no weak import that discovers unavailable source exports.
+
+Condition preprocessing handles repeated token-identical predicates together and
+reenters the macro through native Rust macro expansion.
+Rust's `recursion_limit` applies when a module has many independent conditions;
+raise the crate limit if necessary.
+
+## Optional and collection arguments
+
+Factory arguments accept three forms:
+
+| Argument | Factory receives | Missing target |
+| --- | --- | --- |
+| `key` | `Shared<T>` | Compilation error |
+| `optional(key)` | `Option<Shared<T>>` | `None` |
+| `all(group)` | `Vec<Shared<T>>` | Empty vector |
+
+```rust
+use fluxdi::{Error, Shared, static_module};
+
+struct Config;
+trait Plugin: Send + Sync {}
+struct FirstPlugin;
+struct SecondPlugin;
+impl Plugin for FirstPlugin {}
+impl Plugin for SecondPlugin {}
+struct Service(Option<Shared<Config>>, Vec<Shared<dyn Plugin>>);
+
+fn first_plugin() -> Result<Shared<dyn Plugin>, Error> {
+    Ok(Shared::new(FirstPlugin))
+}
+fn second_plugin() -> Result<Shared<dyn Plugin>, Error> {
+    Ok(Shared::new(SecondPlugin))
+}
+fn service(config: Option<Shared<Config>>, plugins: Vec<Shared<dyn Plugin>>)
+    -> Result<Shared<Service>, Error> {
+    Ok(Shared::new(Service(config, plugins)))
+}
+
+static_module! {
+    struct App {
+        #[cfg(feature = "debug")]
+        external config: Config;
+        #[scope(root)]
+        #[set(plugins)]
+        first: dyn Plugin = first_plugin();
+        #[cfg(feature = "debug")]
+        #[scope(root)]
+        #[set(plugins)]
+        second: dyn Plugin = second_plugin();
+        service: Service = service(optional(config), all(plugins));
+    }
+}
+```
+
+`optional(key)` deliberately permits an undeclared key as well as a disabled key;
+a misspelling can therefore produce `None`. A present binding resolves to `Some`,
+and its factory errors propagate unchanged. Optionality does not hide failures.
+
+`#[set(group)]` explicitly tags a binding as a contributor to a local collection.
+Factory, external, and individual imported bindings can carry this attribute.
+`#[set(first, second)]` and multiple `set` attributes allow multiple groups;
+empty attributes and duplicate membership in the same group are errors. Import
+entries must be tagged at the import site: source collections are not automatically
+imported. Importing a member preserves its provider identity and scope.
+
+`all(group)` selects active contributors in declaration order, with imported entries
+at the import block's position. It does not scan types or query the dynamic registry.
+Each call builds a vector for that consumer argument; it does not create a separately
+cached collection provider. Members retain their usual caches. Dependencies resolve
+sequentially in factory-argument order and collection-member order. The first error
+stops resolution and propagates without invoking the consumer factory.
+
+Rust checks argument types and normal coercions, including compatible concrete
+`Shared` values in trait-object arguments. All collection members must fit the
+factory parameter. Arbitrary argument expressions and nested wrappers are unsupported;
+bare binding keys named `optional` and `all` remain valid required arguments.
+
+Only present optional targets and active collection members add graph edges. Those
+edges participate in cycle checks, root-capture checks, and async inference just like
+required dependencies. Absent optional targets and empty collections add no edges.
+The runtime container and `Injectable` retain their existing set contract, including
+an error for an empty runtime set; this static empty-vector behavior is separate.
 
 ## Import selected bindings
 
@@ -149,8 +253,9 @@ These are the same rules as [fallible factories](./fallible-factories.md).
 
 ## Compilation checks
 
-Macro expansion rejects unknown binding identifiers, duplicate identifiers, constructor
-cycles, invalid scopes, and generated-method name conflicts. Cycle diagnostics include
+After condition selection, macro expansion rejects unknown required binding identifiers,
+duplicate identifiers, constructor cycles, invalid scopes, and generated-method name
+conflicts. Cycle diagnostics include
 the dependency chain. Factories with incompatible argument or return types fail Rust
 type checking.
 
@@ -203,17 +308,18 @@ claim zero lookup or zero allocation cost.
 ## Current boundaries
 
 Imported modules form a closed dependency DAG: a source module cannot depend back
-on its importer. Automatic discovery, conditional bindings, implicit optional/set
-selection, cyclic module imports, and lifecycle startup/shutdown ordering remain
-unsupported. Supply optional values and collections explicitly as external inputs
-when appropriate. `Injectable` remains the separate runtime-container derive API;
+on its importer. Automatic discovery, implicit type-based optional/set selection,
+cyclic module imports, and lifecycle startup/shutdown ordering remain unsupported.
+`Injectable` remains the separate runtime-container derive API;
 static assembly is not a complete CDI implementation.
 
 `new`, `create_child`, `create_scope`, `in_context`, `injector`, `clone`, and `default`
 are reserved binding names. Collisions with generated hidden export methods are also rejected.
 Generated hidden provider and metadata helpers are implementation glue, not an
-application API. Module generics are rejected. Module and import attributes support
-only documentation; local bindings also accept `#[scope(...)]`.
+application API. Module generics are rejected. Modules and import blocks accept
+documentation and native condition attributes.
+Local factories also accept `#[scope(...)]` and `#[set(...)]`; external and imported
+bindings accept `#[set(...)]` but cannot override their source scope.
 Publish the core and macro crates together when releasing this API.
 
 See [Web Integrations](./web-integrations.md) for bridging a static module into a
@@ -222,4 +328,9 @@ request scope. Run the executable example with:
 ```bash
 cargo run -p fluxdi --example static_module --features macros
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory
+cargo run -p fluxdi --example static_conditionals --features macros
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros
 ```
+
+The last two commands run the conditional example with the default `debug` feature
+on and off, changing the optional config and plugin membership.

@@ -14,6 +14,8 @@ This checkout is unreleased and requires Rust 1.99.1. Read the
 cargo test --workspace --all-features --locked
 cargo run -p fluxdi --example static_module --features macros --locked
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
+cargo run -p fluxdi --example static_conditionals --features macros --locked
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros --locked
 cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked
 ```
 

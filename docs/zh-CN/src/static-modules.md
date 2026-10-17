@@ -1,6 +1,6 @@
 # 静态模块
 
-尚未发布的 `static_module!` 宏提供显式的类型化组装，支持按绑定选择模块导入，以及同步和异步工厂。需要启用 `macros`；异步依赖图还要求 `async-factory`。核心仍然独立于 HTTP 框架。
+尚未发布的 `static_module!` 宏提供显式的类型化组装，支持按绑定选择模块导入、Rust 原生条件、可选参数、集合参数，以及同步和异步工厂。需要启用 `macros`；异步依赖图还要求 `async-factory`。核心仍然独立于 HTTP 框架。
 
 ```toml
 fluxdi = { path = "../fluxdi", features = ["macros"] }
@@ -43,7 +43,75 @@ assert!(Shared::ptr_eq(&a, &b));
 
 通过绑定标识符选择依赖。多个绑定可以具有相同类型；`service(primary_repository)` 显式选择其中一个。支持 trait 对象和类型别名，Rust 会检查工厂参数与返回类型。声明顺序不决定构造顺序。
 
-同步工厂是函数路径，接收声明的 `Shared<T>` 参数并返回 `Result<Shared<T>, Error>`。工厂在首次解析时按需执行。外部值具有根作用域。导入模块实例和外部值按两者在声明中出现的先后顺序传入构造方法。这些值构成显式边界：宏无法检查它们的构造过程。
+同步工厂是函数路径，接收声明的依赖参数并返回 `Result<Shared<T>, Error>`。工厂在首次解析时按需执行。外部值具有根作用域。导入模块实例和外部值按两者在声明中出现的先后顺序传入构造方法。这些值构成显式边界：宏无法检查它们的构造过程。
+
+## 编译期条件
+
+模块、局部工厂绑定、外部输入、导入块和单个导入项均可使用[原生 `#[cfg(...)]` 与 `#[cfg_attr(...)]`](https://doc.rust-lang.org/reference/conditional-compilation.html)。Rust 先选择启用的声明，宏再解析并检查这些声明的依赖图。未启用的声明不提供类型、构造方法参数、依赖边、异步传播、作用域检查或集合成员。未启用的声明仍须保持 DSL 语法结构完整。条件遵循编译当前 crate 时的 Rust 配置；宏不读取进程环境变量来判断条件，也不求值运行时条件。
+
+`cfg_attr` 可以添加所在位置支持的属性：`cfg`、文档属性、局部工厂的 `scope`，以及工厂、外部绑定和导入项的 `set`。它不能为外部绑定或导入绑定添加作用域。feature 选择可能改变 `new(...)` 的参数列表，以及 getter 推断出的同步或异步签名；签名有差异时，调用方须使用匹配的条件。
+
+导出绑定的条件在定义它的 crate 中求值。来源 crate 禁用了某个导出后，导入该绑定仍会编译失败，使用 `optional(local_key)` 也不会跳过导入。应在消费方使用相应条件禁用导入。不支持自动判断来源导出是否可用的弱导入。
+
+条件预处理会一起处理 token 相同的重复条件，并通过 Rust 原生宏展开再次调用宏。模块包含许多独立条件时仍受 Rust 的 `recursion_limit` 限制；必要时提高 crate 的限制。
+
+## 可选参数和集合参数
+
+工厂参数支持三种形式：
+
+| 参数 | 工厂接收的类型 | 目标不存在时 |
+| --- | --- | --- |
+| `key` | `Shared<T>` | 编译错误 |
+| `optional(key)` | `Option<Shared<T>>` | `None` |
+| `all(group)` | `Vec<Shared<T>>` | 空向量 |
+
+```rust
+use fluxdi::{Error, Shared, static_module};
+
+struct Config;
+trait Plugin: Send + Sync {}
+struct FirstPlugin;
+struct SecondPlugin;
+impl Plugin for FirstPlugin {}
+impl Plugin for SecondPlugin {}
+struct Service(Option<Shared<Config>>, Vec<Shared<dyn Plugin>>);
+
+fn first_plugin() -> Result<Shared<dyn Plugin>, Error> {
+    Ok(Shared::new(FirstPlugin))
+}
+fn second_plugin() -> Result<Shared<dyn Plugin>, Error> {
+    Ok(Shared::new(SecondPlugin))
+}
+fn service(config: Option<Shared<Config>>, plugins: Vec<Shared<dyn Plugin>>)
+    -> Result<Shared<Service>, Error> {
+    Ok(Shared::new(Service(config, plugins)))
+}
+
+static_module! {
+    struct App {
+        #[cfg(feature = "debug")]
+        external config: Config;
+        #[scope(root)]
+        #[set(plugins)]
+        first: dyn Plugin = first_plugin();
+        #[cfg(feature = "debug")]
+        #[scope(root)]
+        #[set(plugins)]
+        second: dyn Plugin = second_plugin();
+        service: Service = service(optional(config), all(plugins));
+    }
+}
+```
+
+`optional(key)` 允许目标未声明或被条件禁用，因此拼写错误也可能得到 `None`。已有绑定解析成功后返回 `Some`；工厂错误原样传播，可选参数不会隐藏初始化失败。
+
+`#[set(group)]` 将绑定显式标记为局部集合的成员。工厂、外部绑定和单个导入项均可携带此属性。使用 `#[set(first, second)]` 或多个 `set` 属性可加入多个组；空属性和同一组内的重复成员标记会报错。导入成员必须在导入位置重新标记；来源模块的集合不会自动导入。导入成员仍保留其提供者身份和作用域。
+
+`all(group)` 按声明顺序选择启用的成员，导入项位于其导入块的声明位置。它不会扫描类型或查询动态注册表。每次为消费方的参数构造向量，不会创建独立缓存的集合提供者；各成员仍遵循自身的缓存规则。依赖按工厂参数顺序和集合成员顺序依次解析。遇到首个错误后停止解析并传播错误，不调用消费方工厂。
+
+Rust 检查参数类型并执行正常的类型强制转换，包括将兼容的具体类型 `Shared` 值用于 trait 对象参数。集合的所有成员都须符合工厂参数类型。不支持任意参数表达式或嵌套包装；名称为 `optional` 和 `all` 的裸绑定标识符仍可作为必需参数。
+
+只有存在的可选目标和启用的集合成员会形成依赖边。这些边与必需依赖一样参与循环检查、根绑定捕获检查和异步推断。缺失的可选目标和空集合不增加依赖边。运行时容器与 `Injectable` 沿用原有集合契约，包括空运行时集合报错；静态参数的空向量行为不改变该契约。
 
 ## 按绑定导入模块
 
@@ -118,7 +186,7 @@ let service = app.service().await?;
 
 ## 编译检查
 
-宏展开会拒绝未知绑定标识符、重复标识符、构造循环、无效作用域及生成方法的名称冲突。循环诊断包含依赖链。工厂参数或返回类型不兼容时，Rust 类型检查会失败。
+条件选择完成后，宏展开会拒绝未知的必需绑定标识符、重复标识符、构造循环、无效作用域及生成方法的名称冲突。循环诊断包含依赖链。工厂参数或返回类型不兼容时，Rust 类型检查会失败。
 
 根绑定不能直接或间接捕获 `singleton` 或 `scoped` 绑定，包括通过瞬态工厂捕获。在没有作用域代理的情况下，这种依赖会把首个调用方的上下文服务保留在全局缓存中。根绑定可以依赖根绑定或外部绑定，也可以保留瞬态工厂生成的值，前提是该工厂的依赖图不包含上下文绑定。导入和重导出的元数据会在模块边界间保留此项检查，包括多层重导出和瞬态绑定的间接依赖；导入不会使原本依赖上下文的绑定变得可供根绑定捕获。
 
@@ -151,13 +219,17 @@ let service = app.service().await?;
 
 ## 当前限制
 
-导入的模块组成封闭的有向无环依赖图：来源模块不能反向依赖导入方。尚不支持自动发现、条件绑定、隐式选择可选依赖或集合、循环模块导入，以及生命周期启动与关闭排序。需要时，将可选值和集合显式作为外部输入传入。`Injectable` 仍是独立的运行时容器派生 API；静态组装尚不等同于完整 CDI。
+导入的模块组成封闭的有向无环依赖图：来源模块不能反向依赖导入方。尚不支持自动发现、按类型隐式选择可选依赖或集合、循环模块导入，以及生命周期启动与关闭排序。`Injectable` 仍是独立的运行时容器派生 API；静态组装尚不等同于完整 CDI。
 
-`new`、`create_child`、`create_scope`、`in_context`、`injector`、`clone` 和 `default` 是保留绑定名称；与生成的隐藏导出方法重名的绑定也会被拒绝。生成的隐藏提供者和元数据辅助方法供内部组装使用，不属于应用 API。不支持模块泛型。模块和导入属性只支持文档属性；局部绑定还支持 `#[scope(...)]`。发布本 API 时，应同时发布核心 crate 和宏 crate。
+`new`、`create_child`、`create_scope`、`in_context`、`injector`、`clone` 和 `default` 是保留绑定名称；与生成的隐藏导出方法重名的绑定也会被拒绝。生成的隐藏提供者和元数据辅助方法供内部组装使用，不属于应用 API。不支持模块泛型。模块和导入块支持文档属性与原生条件属性；局部工厂还支持 `#[scope(...)]` 和 `#[set(...)]`。外部绑定与导入绑定支持 `#[set(...)]`，但不能覆盖来源作用域。发布本 API 时，应同时发布核心 crate 和宏 crate。
 
 将静态模块接入请求作用域的方法参见 [Web 集成](./web-integrations.md)。运行可执行示例：
 
 ```bash
 cargo run -p fluxdi --example static_module --features macros
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory
+cargo run -p fluxdi --example static_conditionals --features macros
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros
 ```
+
+最后两条命令分别启用和禁用默认的 `debug` feature，展示可选配置和插件集合成员的变化。

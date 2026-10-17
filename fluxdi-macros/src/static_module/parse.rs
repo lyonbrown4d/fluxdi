@@ -1,7 +1,7 @@
 use syn::parse::{Parse, ParseStream};
 use syn::{Attribute, Ident, Path, PathArguments, Token, braced, parenthesized};
 
-use super::{Binding, Factory, Import, Imported, Input, Module, Scope};
+use super::{Argument, Binding, Factory, Import, Imported, Input, Module, Scope, key};
 
 mod keyword {
     syn::custom_keyword!(external);
@@ -68,8 +68,8 @@ impl Module {
         let body;
         braced!(body in input);
         while !body.is_empty() {
-            let docs = Attribute::parse_outer(&body)?;
-            require_docs(&docs, "imported bindings only support doc attributes")?;
+            let attributes = Attribute::parse_outer(&body)?;
+            let (docs, groups) = parse_member_attributes(attributes)?;
             let declared_async = body.parse::<Option<Token![async]>>()?.is_some();
             let name: Ident = body.parse()?;
             body.parse::<Token![:]>()?;
@@ -89,6 +89,7 @@ impl Module {
                 factory: None,
                 imported: Some(Imported { module, source }),
                 declared_async,
+                groups,
             });
         }
         input.parse::<Token![;]>()?;
@@ -101,6 +102,7 @@ impl Module {
 fn parse_binding(input: ParseStream<'_>, attributes: Vec<Attribute>) -> syn::Result<Binding> {
     let mut docs = Vec::new();
     let mut scope = None;
+    let mut groups = Vec::new();
     for attribute in attributes {
         if attribute.path().is_ident("scope") {
             if scope.is_some() {
@@ -122,10 +124,12 @@ fn parse_binding(input: ParseStream<'_>, attributes: Vec<Attribute>) -> syn::Res
                     ));
                 }
             });
+        } else if attribute.path().is_ident("set") {
+            parse_groups(&attribute, &mut groups)?;
         } else {
             require_doc(
                 &attribute,
-                "static bindings only support scope and doc attributes",
+                "static bindings only support scope, set, and doc attributes",
             )?;
             docs.push(attribute);
         }
@@ -157,7 +161,7 @@ fn parse_binding(input: ParseStream<'_>, attributes: Vec<Attribute>) -> syn::Res
         let arguments;
         parenthesized!(arguments in input);
         let dependencies = arguments
-            .parse_terminated(Ident::parse, Token![,])?
+            .parse_terminated(Argument::parse, Token![,])?
             .into_iter()
             .collect();
         Some(Factory { path, dependencies })
@@ -175,6 +179,7 @@ fn parse_binding(input: ParseStream<'_>, attributes: Vec<Attribute>) -> syn::Res
         factory,
         imported: None,
         declared_async,
+        groups,
     })
 }
 
@@ -191,4 +196,67 @@ fn require_doc(attribute: &Attribute, message: &str) -> syn::Result<()> {
     } else {
         Err(syn::Error::new_spanned(attribute, message))
     }
+}
+
+impl Parse for Argument {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let name: Ident = input.parse()?;
+        if !input.peek(syn::token::Paren) {
+            return Ok(Self::Required(name));
+        }
+        let arguments;
+        parenthesized!(arguments in input);
+        let target: Ident = arguments.parse()?;
+        if !arguments.is_empty() {
+            return Err(arguments.error("expected a single binding or group key"));
+        }
+        match key(&name).as_str() {
+            "optional" => Ok(Self::Optional(target)),
+            "all" => Ok(Self::All(target)),
+            _ => Err(syn::Error::new_spanned(
+                name,
+                "expected optional(key) or all(group)",
+            )),
+        }
+    }
+}
+
+fn parse_member_attributes(
+    attributes: Vec<Attribute>,
+) -> syn::Result<(Vec<Attribute>, Vec<Ident>)> {
+    let mut docs = Vec::new();
+    let mut groups = Vec::new();
+    for attribute in attributes {
+        if attribute.path().is_ident("set") {
+            parse_groups(&attribute, &mut groups)?;
+        } else {
+            require_doc(
+                &attribute,
+                "imported bindings only support doc attributes and set attributes",
+            )?;
+            docs.push(attribute);
+        }
+    }
+    Ok((docs, groups))
+}
+
+fn parse_groups(attribute: &Attribute, groups: &mut Vec<Ident>) -> syn::Result<()> {
+    let values = attribute
+        .parse_args_with(syn::punctuated::Punctuated::<Ident, Token![,]>::parse_terminated)?;
+    if values.is_empty() {
+        return Err(syn::Error::new_spanned(
+            attribute,
+            "set requires at least one group key",
+        ));
+    }
+    for group in values {
+        if groups.iter().any(|existing| key(existing) == key(&group)) {
+            return Err(syn::Error::new_spanned(
+                &group,
+                format!("duplicate static set membership `{}`", key(&group)),
+            ));
+        }
+        groups.push(group);
+    }
+    Ok(())
 }

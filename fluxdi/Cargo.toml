@@ -66,3 +66,7 @@ required-features = ["macros"]
 [[example]]
 name = "static_composition_async"
 required-features = ["macros", "async-factory"]
+
+[[example]]
+name = "static_conditionals"
+required-features = ["macros"]

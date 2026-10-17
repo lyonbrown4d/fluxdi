@@ -117,10 +117,16 @@ Static bindings are separate from the dynamic registry: dynamic overrides and gr
 snapshots do not describe or alter them. Imports preserve source provider identity
 and scope; constructors take imported instances and external values in declaration
 order and create a fresh context. Async graphs require `macros` and `async-factory`;
-async dependencies propagate to generated getters. Automatic discovery, conditional
-bindings, cyclic imports, and lifecycle ordering remain unsupported. It is not a
+async dependencies propagate to generated getters. Native `cfg`/`cfg_attr` select
+active declarations before graph validation. `optional(key)` supplies `None` for an
+absent binding and preserves factory errors; `all(group)` collects explicit local
+`#[set(group)]` members in declaration order and permits an empty vector. Only active
+edges affect cycle, root-capture, and async checks. Conditions can change constructor
+inputs and getter async signatures. Automatic discovery, cyclic imports, and lifecycle
+ordering remain unsupported. It is not a
 full CDI implementation. See [static modules](../docs/src/static-modules.md) for
-import aliases, context reuse, async qualifiers, and retry behavior.
+import aliases, conditions, collection membership, context reuse, async qualifiers,
+and retry behavior.
 
 ## Application and HTTP lifetime
 
@@ -171,6 +177,8 @@ cargo test --workspace --locked
 cargo run -p basic --locked
 cargo run -p fluxdi --example static_module --features macros --locked
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
+cargo run -p fluxdi --example static_conditionals --features macros --locked
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros --locked
 sh docs/build.sh
 ```
 

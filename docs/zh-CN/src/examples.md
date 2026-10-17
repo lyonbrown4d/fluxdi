@@ -4,6 +4,7 @@
 
 - `fluxdi/examples/static_module.rs`（编译期依赖图与类型化组装；要求 `macros`）
 - `fluxdi/examples/static_composition_async.rs`（按绑定选择模块导入与异步工厂；要求 `macros,async-factory`）
+- `fluxdi/examples/static_conditionals.rs`（原生条件、可选配置与有序插件集合；要求 `macros`；可对比默认 `debug` 的启用和禁用）
 
 - `examples/basic`
 - `examples/injectable-macro`（宏与手动实现的等价性）
@@ -38,6 +39,8 @@ cargo run -p injectable-macro-example
 cargo run -p decorator-example
 cargo run -p fluxdi --example static_module --features macros
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory
+cargo run -p fluxdi --example static_conditionals --features macros
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros
 cargo run --manifest-path examples/seaorm-sqlite/Cargo.toml --locked
 ```
 

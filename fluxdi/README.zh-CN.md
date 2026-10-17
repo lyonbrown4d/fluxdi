@@ -89,7 +89,7 @@ fn main() -> Result<(), Error> {
 
 该宏在编译期检查声明中缺失的绑定、循环、作用域和工厂类型。根绑定不能捕获已声明的上下文依赖。初始化仍然可能在运行时失败；网络操作、配置和外部资源构造不在这些检查范围内。
 
-静态绑定独立于动态注册表：动态覆盖和依赖图快照不会描述或改变这些绑定。导入保留来源提供者的身份和作用域；构造方法按声明顺序接收导入模块实例及外部值，并创建新上下文。异步依赖图要求启用 `macros` 和 `async-factory`，异步依赖会使生成的 getter 变为异步。尚不支持自动发现、条件绑定、循环导入或生命周期排序，不是完整的 CDI 实现。导入别名、上下文复用、异步标记及重试行为参见[静态模块](../docs/zh-CN/src/static-modules.md)。
+静态绑定独立于动态注册表：动态覆盖和依赖图快照不会描述或改变这些绑定。导入保留来源提供者的身份和作用域；构造方法按声明顺序接收导入模块实例及外部值，并创建新上下文。异步依赖图要求启用 `macros` 和 `async-factory`，异步依赖会使生成的 getter 变为异步。原生 `cfg`/`cfg_attr` 在依赖图检查前选择启用的声明。`optional(key)` 在绑定缺失时传入 `None`，保留工厂错误；`all(group)` 按声明顺序收集通过 `#[set(group)]` 显式标记的局部成员，允许空向量。只有启用的依赖边参与循环、根绑定捕获和异步检查。条件可能改变构造参数和 getter 的异步签名。尚不支持自动发现、循环导入或生命周期排序，不是完整的 CDI 实现。导入别名、条件、集合成员、上下文复用、异步标记及重试行为参见[静态模块](../docs/zh-CN/src/static-modules.md)。
 
 ## 应用与 HTTP 生命周期
 
@@ -129,6 +129,8 @@ cargo test --workspace --locked
 cargo run -p basic --locked
 cargo run -p fluxdi --example static_module --features macros --locked
 cargo run -p fluxdi --example static_composition_async --features macros,async-factory --locked
+cargo run -p fluxdi --example static_conditionals --features macros --locked
+cargo run -p fluxdi --example static_conditionals --no-default-features --features macros --locked
 sh docs/build.sh
 ```
 

@@ -3,11 +3,16 @@ use syn::ext::IdentExt;
 use syn::{Attribute, Ident, Path, Type, Visibility};
 
 mod codegen;
+mod conditions;
 mod graph;
 mod metadata;
 mod parse;
 mod providers;
 
+#[cfg(test)]
+mod argument_tests;
+#[cfg(test)]
+mod condition_tests;
 #[cfg(test)]
 mod tests;
 
@@ -38,6 +43,7 @@ struct Binding {
     factory: Option<Factory>,
     imported: Option<Imported>,
     declared_async: bool,
+    groups: Vec<Ident>,
 }
 
 struct Imported {
@@ -47,7 +53,28 @@ struct Imported {
 
 struct Factory {
     path: Path,
-    dependencies: Vec<Ident>,
+    dependencies: Vec<Argument>,
+}
+
+enum Argument {
+    Required(Ident),
+    Optional(Ident),
+    All(Ident),
+}
+
+impl Argument {
+    fn name(&self) -> &Ident {
+        match self {
+            Self::Required(name) | Self::Optional(name) | Self::All(name) => name,
+        }
+    }
+}
+
+pub(super) fn expand(input: TokenStream) -> syn::Result<TokenStream> {
+    if let Some(output) = conditions::preprocess(input.clone())? {
+        return Ok(output);
+    }
+    syn::parse2::<Module>(input)?.expand()
 }
 
 #[derive(Clone, Copy, Default, PartialEq)]

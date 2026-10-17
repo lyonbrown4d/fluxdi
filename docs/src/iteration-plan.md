@@ -98,7 +98,7 @@ and [Web Integrations](./web-integrations.md).
 
 ## Batch 5: module imports and static async factories
 
-Implementation and local functional validation are complete.
+Completed and pushed as `7b6b01e`. Local functional validation passed.
 
 - Added explicit module imports with selected exports, local aliases and nested reexports.
 - Reused typed provider identities; constructor inputs follow combined import/external declaration order.
@@ -121,5 +121,34 @@ graph is unchanged; the upstream h2 finding recorded in Batch 4 remains tracked 
 The core remains framework-independent and has no new runtime dependencies. Async
 graphs require `macros,async-factory`; sync-only modules still work without the
 async feature. Imports require explicit source async declarations, checked against
-generated metadata. Conditions, discovery, implicit optional/set selection and
-lifecycle ordering remain future work; cyclic module composition is unsupported.
+generated metadata. At the end of Batch 5, conditions, discovery, implicit optional/set
+selection and lifecycle ordering remained future work; cyclic module composition was unsupported.
+
+## Batch 6: conditional bindings and static optional/collection injection
+
+Completed; local functional validation passed.
+
+- Added native `cfg`/`cfg_attr` filtering before semantic parsing and graph validation, covering modules, bindings, externals and imports.
+- Delegated predicates to the defining crate's compiler configuration; grouped identical predicates to reduce recursive expansion.
+- Added `optional(key)` for optional factory arguments, preserving errors from present bindings.
+- Added local named groups via `#[set(group)]` and ordered `all(group)` factory arguments; empty groups are valid.
+- Preserved type coercions, provider identity, scope caches and explicit import-site membership.
+- Included only active optional and collection edges in cycle, lifetime and async checks, with correct diagnostic argument positions.
+- Updated both documentation languages and added `static_conditionals` with debug-enabled/disabled execution examples.
+
+Validation: 323 workspace tests and all 12 feature combinations passed. Strict
+workspace/all-target Clippy,
+standalone SeaORM Clippy, Rust API documentation, both mdBook languages, paired
+code examples, local Markdown links and formatting passed. The conditional example
+ran with debug enabled and disabled; the standalone SeaORM example ran successfully.
+A separate library/application fixture passed four configurations and confirmed six
+expected diagnostics for conditional imports, required/duplicate keys, expanded
+collection cycles and root captures. The dependency graph is unchanged; the upstream
+h2 finding remains tracked in [Dependency Audit](./dependency-audit.md).
+
+Factory arguments remain explicit; automatic type-based candidate discovery is not
+implemented. Unknown optional keys and collection groups are intentionally empty
+requests. Importing an unavailable source export still fails compilation unless its
+import is disabled. Conditions may change constructor parameters and inferred async
+getters. Many independent conditions still consume Rust's native macro recursion
+limit. Lifecycle ordering and cyclic module composition remain unsupported.

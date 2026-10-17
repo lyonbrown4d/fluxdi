@@ -1,11 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use super::{Module, Scope, key};
+use super::{Argument, Module, Scope, key};
 
 pub(super) struct Graph {
     pub(super) order: Vec<usize>,
     pub(super) dependencies: Vec<Vec<usize>>,
     pub(super) is_async: Vec<bool>,
+    pub(super) arguments: Vec<Vec<std::ops::Range<usize>>>,
+    edge_arguments: Vec<Vec<usize>>,
 }
 
 impl Module {
@@ -64,24 +66,45 @@ impl Module {
                 );
             }
         }
+        let mut groups: HashMap<String, Vec<usize>> = HashMap::new();
+        for (index, binding) in self.bindings.iter().enumerate() {
+            for group in &binding.groups {
+                groups.entry(key(group)).or_default().push(index);
+            }
+        }
         let mut dependencies = vec![Vec::new(); self.bindings.len()];
+        let mut arguments = vec![Vec::new(); self.bindings.len()];
+        let mut edge_arguments = vec![Vec::new(); self.bindings.len()];
         for (index, binding) in self.bindings.iter().enumerate() {
             if let Some(factory) = &binding.factory {
-                for dependency in &factory.dependencies {
-                    match names.get(&key(dependency)) {
-                        Some(target) => dependencies[index].push(*target),
-                        None => combine(
-                            &mut errors,
-                            syn::Error::new_spanned(
-                                dependency,
-                                format!(
-                                    "unknown static binding `{}` required by `{}`",
-                                    key(dependency),
-                                    key(&binding.name)
-                                ),
-                            ),
-                        ),
+                for (argument, dependency) in factory.dependencies.iter().enumerate() {
+                    let start = dependencies[index].len();
+                    match dependency {
+                        Argument::All(group) => {
+                            dependencies[index]
+                                .extend(groups.get(&key(group)).into_iter().flatten());
+                        }
+                        Argument::Required(name) | Argument::Optional(name) => {
+                            if let Some(target) = names.get(&key(name)) {
+                                dependencies[index].push(*target);
+                            } else if matches!(dependency, Argument::Required(_)) {
+                                combine(
+                                    &mut errors,
+                                    syn::Error::new_spanned(
+                                        name,
+                                        format!(
+                                            "unknown static binding `{}` required by `{}`",
+                                            key(name),
+                                            key(&binding.name)
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
                     }
+                    let end = dependencies[index].len();
+                    arguments[index].push(start..end);
+                    edge_arguments[index].extend(std::iter::repeat_n(argument, end - start));
                 }
             }
         }
@@ -91,6 +114,8 @@ impl Module {
         let mut graph = Graph {
             order: Vec::with_capacity(self.bindings.len()),
             dependencies,
+            arguments,
+            edge_arguments,
             is_async: self
                 .bindings
                 .iter()
@@ -140,7 +165,9 @@ impl Module {
                     .map(|item| key(&self.bindings[*item].name))
                     .collect::<Vec<_>>()
                     .join(" -> ");
-                let edge = &self.bindings[index].factory.as_ref().unwrap().dependencies[offset];
+                let argument = graph.edge_arguments[index][offset];
+                let edge =
+                    self.bindings[index].factory.as_ref().unwrap().dependencies[argument].name();
                 return Err(syn::Error::new_spanned(
                     edge,
                     format!(
@@ -178,7 +205,9 @@ impl Module {
                     .map(|item| key(&self.bindings[*item].name))
                     .collect::<Vec<_>>()
                     .join(" -> ");
-                let edge = &self.bindings[index].factory.as_ref().unwrap().dependencies[offset];
+                let argument = graph.edge_arguments[index][offset];
+                let edge =
+                    self.bindings[index].factory.as_ref().unwrap().dependencies[argument].name();
                 return Err(syn::Error::new_spanned(
                     edge,
                     format!("static dependency cycle: {cycle}"),

@@ -3,7 +3,7 @@ use quote::quote;
 
 use super::codegen::{export, generated};
 use super::graph::Graph;
-use super::{Module, Scope};
+use super::{Argument, Module, Scope};
 
 impl Module {
     pub(super) fn provider_constructors(
@@ -49,7 +49,15 @@ impl Module {
                     quote!(let #resolved = #injector.try_resolve_provider(&#captured)?;)
                 }
             });
-            let resolved = (0..graph.dependencies[*index].len()).map(|offset| generated("resolved", offset));
+            let resolved = factory.dependencies.iter().zip(&graph.arguments[*index]).map(|(argument, edges)| {
+                let values = edges.clone().map(|offset| generated("resolved", offset)).collect::<Vec<_>>();
+                match argument {
+                    Argument::Required(_) => quote!(#(#values)*),
+                    Argument::Optional(_) if values.is_empty() => quote!(::std::option::Option::None),
+                    Argument::Optional(_) => quote!(::std::option::Option::Some(#(#values)*)),
+                    Argument::All(_) => quote!(::std::vec![#(#values),*]),
+                }
+            });
             let invocation = if binding.declared_async {
                 quote!(#path(#(#resolved),*).await)
             } else {

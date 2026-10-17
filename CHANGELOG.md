@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Native Rust `cfg`/`cfg_attr` conditions in static modules, selected before semantic graph validation
+- Static `optional(key)` and `all(group)` factory arguments with explicit local `#[set(group)]` membership, ordered resolution, and preserved initialization errors
+- Runnable `static_conditionals` example comparing default `debug` on/off
+
 - Static module imports with explicit export selection and aliases, preserving provider identity, scope safety and async metadata across reexports
 - Static async factories and transitive async getters with `macros,async-factory`, lazy initialization, and existing fallible retry/cancellation behavior
 - Runnable `static_composition_async` example for imports and async composition

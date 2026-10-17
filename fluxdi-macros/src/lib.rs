@@ -13,10 +13,11 @@ use dependency::Dependency;
 /// `Result<Shared<T>, Error>`; async factories return a future with that output.
 /// Imported modules and external values are supplied to `new` in declaration order.
 /// Async graphs require FluxDI's `async-factory` feature.
+/// Native `cfg`/`cfg_attr` attributes select the graph before validation.
+/// Factory arguments also support `optional(key)` and named collections via `all(group)`.
 #[proc_macro]
 pub fn static_module(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as static_module::Module);
-    match input.expand() {
+    match static_module::expand(input.into()) {
         Ok(tokens) => tokens.into(),
         Err(error) => error.to_compile_error().into(),
     }
