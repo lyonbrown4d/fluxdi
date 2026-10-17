@@ -73,10 +73,15 @@ struct GraphBuildState {
 }
 
 fn dependency_label(cardinality: DependencyCardinality, name: Option<&str>) -> Option<String> {
+    let cardinality_label = if cardinality == DependencyCardinality::Optional {
+        "optional"
+    } else {
+        "one"
+    };
     match cardinality {
-        DependencyCardinality::One => match name {
-            Some(name) => Some(format!("one:{name}")),
-            None => Some("one".to_string()),
+        DependencyCardinality::One | DependencyCardinality::Optional => match name {
+            Some(name) => Some(format!("{cardinality_label}:{name}")),
+            None => Some(cardinality_label.to_string()),
         },
         DependencyCardinality::All => Some("all".to_string()),
     }
@@ -260,3 +265,5 @@ mod ts_storage_write;
 mod cache_storage;
 mod initialization;
 mod resolution;
+
+mod optional_resolution;

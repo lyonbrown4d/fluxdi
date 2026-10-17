@@ -148,7 +148,7 @@ cargo run -p basic
 
 Demonstrates `#[derive(Injectable)]` as an alternative to manual provider closures:
 - Same behavior as manual `Provider::root(|inj| { ... })`
-- Reduces boilerplate when all dependencies are `Shared<T>`
+- Supports `Shared<T>`, `Option<Shared<T>>`, and `Vec<Shared<T>>` dependencies, including generics and named bindings in the unreleased workspace
 - Side-by-side parity with `examples/basic`
 
 **Run:**
@@ -644,6 +644,8 @@ struct UserService {
     repo: Shared<MyRepo>,
 }
 ```
+
+The unreleased workspace also supports generics, `#[inject(name = "main")]`, optional and set dependencies. Register `YourType::provider(scope)` to attach inferred graph hints. See the [derive reference](../docs/src/derive-macros.md) for syntax and error semantics.
 
 ### Dependency Injection
 

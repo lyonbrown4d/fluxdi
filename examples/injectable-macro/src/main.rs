@@ -108,9 +108,12 @@ fn main() {
 
     // AppService: uses #[derive(Injectable)] - one line instead of manual closure
     injector
-        .try_provide::<AppService>(Provider::root(AppService::from_injector))
+        .try_provide::<AppService>(AppService::provider(fluxdi::Scope::Root))
         .expect("register AppService");
 
+    injector
+        .try_validate_graph()
+        .expect("validate derived dependency hints");
     let app = injector.resolve::<AppService>();
     let result = app.run_query("SELECT * FROM users");
     println!("Result: {}\n", result);

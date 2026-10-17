@@ -84,6 +84,23 @@ impl<T: ?Sized + 'static> Provider<T> {
         self
     }
 
+    /// Declares an optional dependency. Missing bindings do not invalidate the graph.
+    pub fn with_optional_dependency<D: ?Sized + 'static>(mut self) -> Self {
+        self.dependency_hints
+            .push(DependencyHint::optional::<D>(None));
+        self
+    }
+
+    /// Declares an optional named dependency for graph tooling.
+    pub fn with_optional_named_dependency<D: ?Sized + 'static>(
+        mut self,
+        name: impl Into<String>,
+    ) -> Self {
+        self.dependency_hints
+            .push(DependencyHint::optional::<D>(Some(name.into())));
+        self
+    }
+
     /// Declares that this provider depends on all set bindings of service `D`.
     ///
     /// This hint is used by graph tooling (`dependency_graph`, `validate_graph`)

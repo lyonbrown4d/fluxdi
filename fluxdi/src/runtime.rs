@@ -81,6 +81,19 @@ pub type Store<T> = RwLock<T>;
 #[cfg(not(feature = "thread-safe"))]
 pub type Store<T> = RefCell<T>;
 
+/// A value that can be resolved by the current FluxDI runtime.
+///
+/// All `'static` types implement this trait. With `thread-safe`, values must
+/// additionally implement `Send + Sync`. Unsized trait objects are supported.
+#[cfg(feature = "thread-safe")]
+pub trait Service: Send + Sync + 'static {}
+#[cfg(feature = "thread-safe")]
+impl<T: ?Sized + Send + Sync + 'static> Service for T {}
+#[cfg(not(feature = "thread-safe"))]
+pub trait Service: 'static {}
+#[cfg(not(feature = "thread-safe"))]
+impl<T: ?Sized + 'static> Service for T {}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -54,6 +54,8 @@ jobs:
         args:
           - ""
           - "--no-default-features"
+          - "--no-default-features --features macros"
+          - "--no-default-features --features macros,async-factory"
           - "--no-default-features --features thread-safe"
           - "--features async-factory"
           - "--features thread-safe,async-factory"

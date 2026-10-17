@@ -1,5 +1,5 @@
-use super::initialization::Service;
 use super::*;
+use crate::runtime::Service;
 
 impl Injector {
     pub(super) fn initialization<T: ?Sized + Service>(

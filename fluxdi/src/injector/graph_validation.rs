@@ -111,7 +111,7 @@ impl Injector {
 
             for dep in &meta.dependencies {
                 let targets: Vec<String> = match dep.cardinality {
-                    DependencyCardinality::One => {
+                    DependencyCardinality::One | DependencyCardinality::Optional => {
                         if let Some(name) = dep.name.clone() {
                             named_ids
                                 .get(&NamedTypeKey {
@@ -131,8 +131,11 @@ impl Injector {
                 };
 
                 if targets.is_empty() {
+                    if dep.cardinality == DependencyCardinality::Optional {
+                        continue;
+                    }
                     let message = match dep.cardinality {
-                        DependencyCardinality::One => {
+                        DependencyCardinality::One | DependencyCardinality::Optional => {
                             if let Some(name) = &dep.name {
                                 format!(
                                     "Graph validation failed: node {} depends on missing named dependency {} ({})",

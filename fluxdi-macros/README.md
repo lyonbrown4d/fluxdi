@@ -1,102 +1,31 @@
 # fluxdi-macros
 
-Procedural macros for FluxDI.
+Procedural macros for FluxDI. The unreleased workspace requires Rust 1.99.1 or newer.
 
-The unreleased workspace requires Rust 1.99.1 or newer. The fallible constructor described below is part of the unreleased workspace.
-
-This crate currently exposes one derive macro:
-
-- `#[derive(Injectable)]`
-
-## Recommended Usage
-
-Use macros via `fluxdi`:
+Enable the macro through `fluxdi` during local development:
 
 ```toml
 [dependencies]
-fluxdi = { version = "1.2.1", features = ["macros"] }
+fluxdi = { path = "../fluxdi", features = ["macros"] }
 ```
 
-Then import from `fluxdi`:
-
 ```rust
-use fluxdi::Injectable;
-```
-
-## What `Injectable` Generates
-
-For a struct:
-
-```rust
-#[derive(Injectable)]
-struct AppService {
-    dep: Shared<MyDep>,
-}
-```
-
-the macro generates:
-
-```rust
-impl AppService {
-    pub fn from_injector(injector: &fluxdi::Injector) -> fluxdi::Shared<Self> {
-        Self::try_from_injector(injector).unwrap_or_else(|error| panic!("{error}"))
-    }
-
-    pub fn try_from_injector(
-        injector: &fluxdi::Injector,
-    ) -> Result<fluxdi::Shared<Self>, fluxdi::Error> {
-        Ok(fluxdi::Shared::new(Self {
-            dep: injector.try_resolve::<MyDep>()?,
-        }))
-    }
-}
-```
-
-## End-to-End Example
-
-```rust
-use fluxdi::{Injectable, Injector, Provider, Shared};
-
-#[derive(Debug)]
-struct Clock {
-    tick: u64,
-}
+use fluxdi::{Injectable, Scope, Shared};
 
 #[derive(Injectable)]
-struct AppService {
-    clock: Shared<Clock>,
+struct AppService<T: ?Sized> {
+    backend: Shared<T>,
+    #[inject(name = "fallback")]
+    fallback: Option<Shared<T>>,
+    plugins: Vec<Shared<T>>,
 }
 
-let injector = Injector::root();
-injector.provide::<Clock>(Provider::root(|_| Shared::new(Clock { tick: 42 })));
-injector.provide::<AppService>(Provider::root(|inj| AppService::from_injector(inj)));
-
-let service = injector.resolve::<AppService>();
-assert_eq!(service.clock.tick, 42);
+// After registering all required dependencies:
+// injector.provide::<AppService<MyBackend>>(AppService::provider(Scope::Root));
 ```
 
-## Derive Constraints
+`Injectable` preserves type/lifetime/const generics and `where` clauses. It generates `from_injector`, `try_from_injector`, `provider(scope)`, and `with_injected_dependencies(provider)`. The latter two attach dependency graph hints; the original constructors alone do not.
 
-`Injectable` currently supports:
+Optional fields return `None` only for absent bindings. Factory errors propagate. Sets require at least one registered member and cannot be named. Only named-field structs with `Shared<T>`, `Option<Shared<T>>`, or `Vec<Shared<T>>` fields are supported.
 
-- Named-field structs only.
-- Non-generic structs only.
-- Fields typed exactly as `Shared<T>`.
-
-Not supported:
-
-- Tuple structs and unit structs.
-- Enums and unions.
-- Generic structs (`struct Service<T> { ... }`).
-- Non-`Shared<T>` fields in derived injection.
-
-## Error Behavior
-
-`try_from_injector` propagates the first dependency resolution error. Register it with a fallible provider and resolve with a `try_` method:
-
-```rust
-injector.provide::<AppService>(Provider::try_root(AppService::try_from_injector));
-let service = injector.try_resolve::<AppService>()?;
-```
-
-`from_injector` keeps the existing panic-on-error behavior. Neither method catches panics from user factories.
+See the [derive reference](../docs/src/derive-macros.md) for bounds, error semantics, generated method names, and custom provider integration.

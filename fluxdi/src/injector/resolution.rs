@@ -1,5 +1,5 @@
-use super::initialization::Service;
 use super::*;
+use crate::runtime::Service;
 
 impl Injector {
     fn resolution_key<T: ?Sized + Service>(&self, provider: &Shared<Provider<T>>) -> ResolutionKey {

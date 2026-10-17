@@ -29,7 +29,15 @@ assert!(report.is_valid());
 Additional hints:
 
 - `with_named_dependency::<T>("name")`
-- `with_set_dependency::<T>()`
+- `with_set_dependency::<T>()` (requires at least one set member)
+- `with_optional_dependency::<T>()`
+- `with_optional_named_dependency::<T>("name")`
+
+With `#[derive(Injectable)]`, register `YourType::provider(scope)` to infer these hints from field declarations. For a custom factory, wrap it in `YourType::with_injected_dependencies(provider)`. See [Derive Macros](./derive-macros.md).
+
+Optional hints use `DependencyCardinality::Optional`. An absent optional target is valid. A registered target creates an `optional` or `optional:name` edge and participates in cycle validation. Existing exhaustive matches on `DependencyCardinality` must handle the new variant.
+
+Graph validation only inspects metadata; it does not initialize services or verify that factories will succeed. Dependencies inside arbitrary closures still require explicit hints. Graph snapshots are not a freeze operation and do not prevent later registration changes.
 
 ## DOT and Mermaid Output
 

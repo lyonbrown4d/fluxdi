@@ -6,6 +6,8 @@ use crate::scope::Scope;
 pub enum DependencyCardinality {
     One,
     All,
+    /// A single binding that may be absent; registered targets still form edges.
+    Optional,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -207,6 +209,15 @@ impl DependencyHint {
             type_name: std::any::type_name::<T>(),
             name: Some(name),
             cardinality: DependencyCardinality::One,
+        }
+    }
+
+    pub(crate) fn optional<T: ?Sized + 'static>(name: Option<String>) -> Self {
+        Self {
+            type_id: TypeId::of::<T>(),
+            type_name: std::any::type_name::<T>(),
+            name,
+            cardinality: DependencyCardinality::Optional,
         }
     }
 

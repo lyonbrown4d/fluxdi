@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Injectable` support for type/lifetime/const generics and existing `where` clauses, named fields via `#[inject(name = "...")]`, optional dependencies, and set dependencies
+- Generated `provider(scope)` and `with_injected_dependencies(provider)` methods to attach inferred graph hints; original constructors remain supported
+- Fallible optional resolution helpers for sync/async unnamed and named bindings, preserving initialization errors
+- Optional graph hints and `DependencyCardinality::Optional`; absent optional targets are valid, while registered targets participate in cycle detection
+- Separate first-resolution, persistent-worker cached-resolution, and thread-startup/control benchmarks
 - Fallible `Provider::try_root`, `try_singleton`, `try_scoped`, `try_transient`, and matching async constructors, returning `Result<Shared<T>, Error>`
 - `Injectable::try_from_injector` for recoverable dependency resolution; the existing `from_injector` constructor still panics on errors
 - `Error::factory_failed` and `ErrorKind::FactoryFailed` for application initialization errors; dependency errors retain their original kind and message
@@ -20,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Downstream exhaustive matches on `DependencyCardinality` must handle `Optional`; derived types must reserve the generated `provider` and `with_injected_dependencies` method names
+- The extended macro requires the updated core APIs. Before publishing, coordinate a major release of both crates so older core releases with a `^1.x` macro dependency cannot select incompatible generated code
+- Concurrent benchmark groups now explicitly distinguish persistent workers from per-iteration thread startup; old combined measurements should not be compared as cached-resolution timings
 - Minimum supported Rust and pinned development/CI baseline are now 1.99.1 across all workspace packages
 - Adding `ErrorKind::FactoryFailed` requires downstream exhaustive matches on `ErrorKind` to handle the new variant
 - Fallible factories cache only successful instances; failed initialization releases resource permits and allows a later caller or waiting caller to retry

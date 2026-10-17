@@ -1,14 +1,7 @@
 use super::*;
 use futures::channel::oneshot;
 
-#[cfg(feature = "thread-safe")]
-pub(super) trait Service: Send + Sync + 'static {}
-#[cfg(feature = "thread-safe")]
-impl<T: ?Sized + Send + Sync + 'static> Service for T {}
-#[cfg(not(feature = "thread-safe"))]
-pub(super) trait Service: 'static {}
-#[cfg(not(feature = "thread-safe"))]
-impl<T: ?Sized + 'static> Service for T {}
+use crate::runtime::Service;
 
 #[derive(Clone, Copy)]
 enum Owner {

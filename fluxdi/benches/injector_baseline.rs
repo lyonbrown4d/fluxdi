@@ -1,18 +1,15 @@
-#[cfg(feature = "thread-safe")]
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-#[cfg(not(feature = "thread-safe"))]
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
 use fluxdi::{Injector, Provider, Shared};
+
+#[cfg(feature = "thread-safe")]
+#[path = "injector_baseline/concurrency.rs"]
+mod concurrency;
 
 #[derive(Debug)]
 struct CachedService(u64);
 
 #[derive(Debug)]
 struct TransientService(u64);
-
-#[cfg(feature = "thread-safe")]
-#[derive(Debug)]
-struct ConcurrentService(u64);
 
 fn bench_cached_resolve(c: &mut Criterion) {
     let injector = Injector::root();
@@ -39,47 +36,29 @@ fn bench_transient_resolve(c: &mut Criterion) {
     });
 }
 
+fn bench_first_resolve(c: &mut Criterion) {
+    c.bench_function("resolve_first", |b| {
+        b.iter_batched(
+            || {
+                let injector = Injector::root();
+                injector
+                    .provide::<CachedService>(Provider::root(|_| Shared::new(CachedService(42))));
+                injector
+            },
+            |injector| {
+                let value = injector.resolve::<CachedService>();
+                // Keep setup state alive until Criterion drops the output,
+                // outside the measured routine.
+                black_box((injector, value))
+            },
+            BatchSize::SmallInput,
+        );
+    });
+}
+
 #[cfg(feature = "thread-safe")]
 fn bench_concurrent_resolve(c: &mut Criterion) {
-    use std::sync::{Arc, Barrier};
-    use std::thread;
-
-    let mut group = c.benchmark_group("resolve_concurrent");
-    for workers in [2usize, 4, 8, 16, 32] {
-        group.bench_with_input(
-            BenchmarkId::from_parameter(workers),
-            &workers,
-            |b, &workers| {
-                let injector = Arc::new(Injector::root());
-                injector.provide::<ConcurrentService>(Provider::root(|_| {
-                    Shared::new(ConcurrentService(11))
-                }));
-                let _ = injector.resolve::<ConcurrentService>();
-
-                b.iter(|| {
-                    let barrier = Arc::new(Barrier::new(workers));
-                    let handles: Vec<_> = (0..workers)
-                        .map(|_| {
-                            let injector = Arc::clone(&injector);
-                            let barrier = Arc::clone(&barrier);
-                            thread::spawn(move || {
-                                barrier.wait();
-                                for _ in 0..64 {
-                                    let value = injector.resolve::<ConcurrentService>();
-                                    black_box(value.0);
-                                }
-                            })
-                        })
-                        .collect();
-
-                    for handle in handles {
-                        handle.join().unwrap();
-                    }
-                });
-            },
-        );
-    }
-    group.finish();
+    concurrency::bench(c);
 }
 
 #[cfg(not(feature = "thread-safe"))]
@@ -138,6 +117,7 @@ fn bench_resolve_decorator_baseline(c: &mut Criterion) {
 criterion_group!(
     benches,
     bench_cached_resolve,
+    bench_first_resolve,
     bench_transient_resolve,
     bench_concurrent_resolve,
     bench_provider_registration,
